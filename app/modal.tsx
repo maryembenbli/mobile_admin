@@ -13,7 +13,7 @@ export default function ModalScreen() {
       </Link>
     </ThemedView>
   );
-}
+}     
 
 const styles = StyleSheet.create({
   container: {
