@@ -80,7 +80,7 @@ export default function LoginScreen() {
             </View>
 
             <Text style={{ marginTop: 12, color: colors.orange, fontWeight: "700" }}>
-              Mot de passe oublié ? (screen بعد)
+              Mot de passe oublié ? 
             </Text>
           </Card>
         </View>

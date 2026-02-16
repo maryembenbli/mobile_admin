@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TextInput, Pressable, ViewStyle } from "react-native";
+import { View, Text, TextInput, Pressable, ViewStyle, Platform } from "react-native";
 import { colors } from "./theme";
 
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
@@ -58,15 +58,22 @@ export function Button({
 
   return (
     <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={{
-        borderRadius: 14,
-        paddingVertical: 14,
-        alignItems: "center",
-        backgroundColor: disabled ? "#BDBDBD" : bg,
-        borderWidth: variant === "ghost" ? 0 : 0,
-      }}
+      onPress={disabled ? undefined : onPress}
+      hitSlop={10}
+      style={({ pressed }) =>
+        ({
+          borderRadius: 14,
+          paddingVertical: 14,
+          alignItems: "center",
+          backgroundColor: disabled ? "#BDBDBD" : bg,
+          opacity: pressed ? 0.85 : 1,
+
+          // ✅ web only cursor (TypeScript safe)
+          ...(Platform.OS === "web"
+            ? ({ cursor: disabled ? "not-allowed" : "pointer" } as any)
+            : {}),
+        }) as any
+      }
     >
       <Text style={{ color: text, fontWeight: "800" }}>{title}</Text>
     </Pressable>
