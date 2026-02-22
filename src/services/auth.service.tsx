@@ -48,11 +48,12 @@ export const resetPassword = async (token, newPassword) => {
 */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from './api';
+import type { UserPermission } from "../constants/permissions";
 
 type AuthUser = {
   sub: string;
   isSuperAdmin?: boolean;
-  permissions?: string[];
+  permissions?: UserPermission[];
 };
 
 type LoginResponse = {
@@ -89,7 +90,7 @@ export const getToken = async (): Promise<string | null> => {
   return AsyncStorage.getItem('token');
 };
 
-// هذوما ينخدمو كان عندك endpoints في backend فعلاً
+
 export const forgotPassword = async (email: string) => {
   const res = await api.post('/auth/forgot-password', { email: email.trim() });
   return res.data;

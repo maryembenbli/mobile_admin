@@ -2,12 +2,12 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const LOCAL_IP = '172.20.10.2'; // <-- حط IP متاع PC (نفس اللي يبان في exp://...)
+const LOCAL_IP = '172.20.10.2'; 
 
-// ✅ baseURL حسب البيئة
+
 const baseURL =
   Platform.OS === 'web'
-    ? 'http://localhost:3000'      // browser على نفس PC
+    ? 'http://localhost:3000'      
     : Platform.OS === 'android'
       ? 'http://10.0.2.2:3000'     // Android Emulator
       : `http://${LOCAL_IP}:3000`; // iOS device / physical phone
