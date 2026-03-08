@@ -203,7 +203,7 @@ export default function PermissionsScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} >
         {/* Top actions */}
         <View
           style={{
