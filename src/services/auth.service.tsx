@@ -50,8 +50,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from './api';
 import type { UserPermission } from "../constants/permissions";
 
+const TOKEN_KEY = 'token';
+const USER_KEY = 'user';
+const LOGOUT_REASON_KEY = 'auth_logout_reason';
+
 type AuthUser = {
   sub: string;
+  email?: string;
   isSuperAdmin?: boolean;
   permissions?: UserPermission[];
 };
@@ -61,14 +66,20 @@ type LoginResponse = {
   user: AuthUser;
 };
 
+type SetupAdminPasswordResponse = {
+  ok: boolean;
+  email: string;
+};
+
 export const saveAuth = async (token: string, user: AuthUser) => {
-  await AsyncStorage.setItem('token', token);
-  await AsyncStorage.setItem('user', JSON.stringify(user));
+  await AsyncStorage.setItem(TOKEN_KEY, token);
+  await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+  await AsyncStorage.removeItem(LOGOUT_REASON_KEY);
 };
 
 export const login = async (email: string, password: string): Promise<LoginResponse> => {
   const res = await api.post<LoginResponse>('/auth/login', {
-    email: email.trim(),
+    email: email.trim().toLowerCase(),
     password,
   });
 
@@ -77,27 +88,63 @@ export const login = async (email: string, password: string): Promise<LoginRespo
 };
 
 export const logout = async () => {
-  await AsyncStorage.removeItem('token');
-  await AsyncStorage.removeItem('user');
+  await AsyncStorage.removeItem(TOKEN_KEY);
+  await AsyncStorage.removeItem(USER_KEY);
+};
+
+export const expireSession = async (reason = 'SESSION_EXPIRED') => {
+  await AsyncStorage.removeItem(TOKEN_KEY);
+  await AsyncStorage.removeItem(USER_KEY);
+  await AsyncStorage.setItem(LOGOUT_REASON_KEY, reason);
+};
+
+export const consumeLogoutReason = async (): Promise<string | null> => {
+  const reason = await AsyncStorage.getItem(LOGOUT_REASON_KEY);
+  if (reason) {
+    await AsyncStorage.removeItem(LOGOUT_REASON_KEY);
+  }
+  return reason;
 };
 
 export const getStoredUser = async (): Promise<AuthUser | null> => {
-  const u = await AsyncStorage.getItem('user');
-  return u ? (JSON.parse(u) as AuthUser) : null;
+  const u = await AsyncStorage.getItem(USER_KEY);
+  if (!u) return null;
+
+  try {
+    return JSON.parse(u) as AuthUser;
+  } catch {
+    await AsyncStorage.removeItem(USER_KEY);
+    return null;
+  }
 };
 
 export const getToken = async (): Promise<string | null> => {
-  return AsyncStorage.getItem('token');
+  return AsyncStorage.getItem(TOKEN_KEY);
 };
 
 
 export const forgotPassword = async (email: string) => {
-  const res = await api.post('/auth/forgot-password', { email: email.trim() });
+  const res = await api.post('/auth/forgot-password', { email: email.trim().toLowerCase() });
   return res.data;
 };
 
 export const resetPassword = async (token: string, newPassword: string) => {
   const res = await api.post('/auth/reset-password', { token, newPassword });
+  return res.data;
+};
+
+export const setupAdminPassword = async (
+  token: string,
+  newPassword: string,
+): Promise<SetupAdminPasswordResponse> => {
+  const res = await api.post<SetupAdminPasswordResponse>(
+    '/auth/setup-admin-password',
+    {
+      token: token.trim(),
+      newPassword,
+    },
+  );
+
   return res.data;
 };
 

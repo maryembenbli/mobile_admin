@@ -10,7 +10,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Card, Input, Button } from "../src/ui/atoms";
+import { Badge, Button, Card, Input, SectionTitle } from "../src/ui/atoms";
 import { colors } from "../src/ui/theme";
 
 import {
@@ -239,8 +239,7 @@ export default function CategoriesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Header */}
-      <View style={{ backgroundColor: colors.blue, paddingTop: 14, paddingBottom: 14 }}>
+      <View style={{ display: "none", backgroundColor: colors.blue, paddingTop: 14, paddingBottom: 14 }}>
         <View style={{ paddingHorizontal: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <Pressable onPress={() => router.back()} style={{ padding: 8 }}>
             <Text style={{ color: "white", fontWeight: "900" }}>←</Text>
@@ -264,8 +263,38 @@ export default function CategoriesScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        <View
+          style={{
+            flexDirection: isWide ? "row" : "column",
+            justifyContent: "space-between",
+            alignItems: isWide ? "center" : "flex-start",
+            gap: 12 as any,
+            marginBottom: 14,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Badge label="CATEGORIES NOVIKA" tone="blue" />
+            <View style={{ marginTop: 10 }}>
+              <SectionTitle
+                title={title}
+                subtitle="Organisez le catalogue avec des categories plus visuelles, actives et simples a maintenir pour l'equipe."
+              />
+            </View>
+          </View>
+
+          <View style={{ width: isWide ? 210 : "100%" }}>
+            <Button
+              title={showCreate ? "Fermer" : "Nouvelle categorie"}
+              variant="orange"
+              onPress={() => (showCreate ? setShowCreate(false) : startCreate())}
+            />
+          </View>
+        </View>
+        <View style={{ marginBottom: 12, width: isWide ? 220 : "100%" }}>
+          <Button title="Retour produits" variant="ghost" onPress={() => router.push("/products")} />
+        </View>
         {/* quick nav back to products */}
-        <View style={{ marginBottom: 12 }}>
+        <View style={{ marginBottom: 12, display: "none" as any }}>
           <Button title="🛍️ Retour Produits" variant="ghost" onPress={() => router.push("/products")} />
         </View>
 

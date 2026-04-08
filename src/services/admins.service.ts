@@ -90,6 +90,16 @@ export type AdminUser = {
   isSuperAdmin: boolean;
   permissions: UserPermission[];
   createdAt?: string;
+  passwordSetupRequired?: boolean;
+  passwordSetupExpires?: string;
+};
+
+export type AdminInviteResponse = {
+  email: string;
+  setupUrl: string;
+  expiresAt: string;
+  passwordSetupRequired: boolean;
+  emailSent?: boolean;
 };
 
 export const getAdmins = async (): Promise<AdminUser[]> => {
@@ -109,5 +119,10 @@ export const updateAdminPermissions = async (id: string, permissions: UserPermis
 
 export const createAdmin = async (email: string, permissions: UserPermission[]) => {
   const res = await api.post("/auth/create-admin", { email, permissions });
-  return res.data as { email: string; password: string };
+  return res.data as AdminInviteResponse;
+};
+
+export const resendAdminInvite = async (email: string) => {
+  const res = await api.post("/auth/resend-admin-invite", { email });
+  return res.data as AdminInviteResponse;
 };

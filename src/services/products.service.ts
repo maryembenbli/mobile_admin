@@ -141,7 +141,7 @@ import type { Product, ProductPayload } from "../types/product";
 
 export type ImageFile = { uri: string; name?: string; type?: string; file?: File };
 
-// helper: convert uri->File (fallback فقط)
+
 async function uriToFile(uri: string, filename: string, mimeType: string) {
   const res = await fetch(uri);
   const blob = await res.blob();

@@ -9,6 +9,7 @@ export type Product = {
   price?: number;
   oldPrice?: number;
   cost?: number;
+  deliveryFee?: number;
   images: string[];
   stock?: number;
   status: ProductStatus;
@@ -25,6 +26,7 @@ export type ProductPayload = {
   price?: number;
   oldPrice?: number;
   cost?: number;
+  deliveryFee?: number;
   stock?: number;
   status?: ProductStatus;
   //  status?: 'affiche' | 'cache' | 'rupture' | 'lien';

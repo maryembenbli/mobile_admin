@@ -10,7 +10,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Card, Input, Button } from "../src/ui/atoms";
+import { Badge, Button, Card, Input, SectionTitle } from "../src/ui/atoms";
 import { colors } from "../src/ui/theme";
 import {
   getPermissionModules,
@@ -181,7 +181,7 @@ export default function PermissionsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* Header */}
-      <View style={{ backgroundColor: colors.blue, paddingTop: 14, paddingBottom: 14 }}>
+      <View style={{ display: "none", backgroundColor: colors.blue, paddingTop: 14, paddingBottom: 14 }}>
         <View
           style={{
             paddingHorizontal: 16,
@@ -204,6 +204,16 @@ export default function PermissionsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} >
+        <View style={{ marginBottom: 18, gap: 10 }}>
+          <Badge label="SECURITE NOVIKA" tone="muted" />
+          <SectionTitle
+            title="Modules et permissions"
+            subtitle="Centralise les droits d'acces de l'equipe admin dans une interface claire et stable."
+          />
+          <View style={{ width: isWide ? 220 : "100%" }}>
+            <Button title="Retour admins" variant="ghost" onPress={() => router.push("/admins")} />
+          </View>
+        </View>
         {/* Top actions */}
         <View
           style={{
@@ -214,7 +224,7 @@ export default function PermissionsScreen() {
             marginBottom: 14,
           }}
         >
-          <Text style={{ fontSize: 18, fontWeight: "900", color: colors.blue }}>
+          <Text style={{ fontSize: 18, fontWeight: "900", color: colors.navy }}>
             Modules & Actions (CRUD)
           </Text>
 

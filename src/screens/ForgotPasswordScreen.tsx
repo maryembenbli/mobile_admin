@@ -1,34 +1,39 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { forgotPassword } from '../services/auth.service';
+import { getApiErrorMessage } from '../utils/api-error';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [screenMessage, setScreenMessage] = useState('');
 
   const onSend = async () => {
-    if (!email.trim()) return Alert.alert('Erreur', 'Email obligatoire');
+    if (!email.trim()) {
+      setScreenMessage('Email obligatoire');
+      return;
+    }
 
     setLoading(true);
+    setScreenMessage('');
     try {
       const res = await forgotPassword(email.trim().toLowerCase());
 
-      // DEV: backend يرجّع resetToken
       if (res?.resetToken) {
         setToken(res.resetToken);
-        Alert.alert('✅ Token reçu (DEV)', res.resetToken);
+        setScreenMessage('Token de reinitialisation genere en mode developpement.');
       } else {
-        Alert.alert('✅ OK', "Si l'email existe, un lien/code a été envoyé.");
+        setToken(null);
+        setScreenMessage("Si l'email existe, un lien ou un code de reinitialisation a ete envoye.");
       }
 
-      // تنجم تمشي مباشرة للـ reset screen
       router.push('/reset-password');
     } catch (e: any) {
       console.log('FORGOT ERROR:', e?.response?.status, e?.response?.data);
-      Alert.alert('Erreur', 'Impossible de lancer le reset');
+      setScreenMessage(getApiErrorMessage(e, 'Impossible de lancer la reinitialisation.'));
     } finally {
       setLoading(false);
     }
@@ -37,13 +42,30 @@ export default function ForgotPasswordScreen() {
   return (
     <View style={{ flex: 1, justifyContent: 'center', padding: 20, gap: 12 as any }}>
       <Text style={{ fontSize: 24, fontWeight: '800', textAlign: 'center' }}>
-        Mot de passe oublié
+        Mot de passe oublie
       </Text>
+
+      {screenMessage ? (
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: '#FCA5A5',
+            backgroundColor: '#FEF2F2',
+            borderRadius: 12,
+            padding: 12,
+          }}
+        >
+          <Text style={{ color: '#991B1B', fontWeight: '700', lineHeight: 20 }}>{screenMessage}</Text>
+        </View>
+      ) : null}
 
       <TextInput
         placeholder="Email"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(value) => {
+          setEmail(value);
+          if (screenMessage) setScreenMessage('');
+        }}
         autoCapitalize="none"
         style={{ borderWidth: 1, borderRadius: 10, padding: 12 }}
       />
@@ -58,7 +80,6 @@ export default function ForgotPasswordScreen() {
         </Text>
       </Pressable>
 
-      {/* DEV فقط: نعرض token إذا رجع */}
       {token ? (
         <Text style={{ marginTop: 10, textAlign: 'center' }}>
           DEV resetToken: {token}

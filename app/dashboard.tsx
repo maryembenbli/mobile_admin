@@ -1,892 +1,262 @@
-// import React, { useEffect, useState } from "react";
-// import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
-// import { useRouter } from "expo-router";
-// import { getStoredUser, getToken, logout } from "../src/services/auth.service";
-
-// type Tab = "dashboard" | "products" | "orders" | "stats";
-// type StoredUser = { sub: string; permissions?: string[]; isSuperAdmin?: boolean };
-
-// const colors = {
-//   blue: "#1E3A8A",
-//   orange: "#F97316",
-//   bg: "#F3F4F6",
-//   white: "#FFFFFF",
-//   grayText: "#6B7280",
-//   border: "#E5E7EB",
-//   green: "#10B981",
-//   amber: "#F59E0B",
-// };
-
-// function Card({
-//   children,
-//   leftAccent,
-// }: {
-//   children: React.ReactNode;
-//   leftAccent?: string;
-// }) {
-//   return (
-//     <View
-//       style={{
-//         backgroundColor: colors.white,
-//         borderRadius: 18,
-//         padding: 16,
-//         borderWidth: 1,
-//         borderColor: colors.border,
-//         borderLeftWidth: leftAccent ? 4 : 1,
-//         borderLeftColor: leftAccent || colors.border,
-//       }}
-//     >
-//       {children}
-//     </View>
-//   );
-// }
-
-// export default function Dashboard() {
-//   const router = useRouter();
-//   const [tab, setTab] = useState<Tab>("dashboard");
-//   const [user, setUser] = useState<StoredUser | null>(null);
-//   const [loading, setLoading] = useState(true);
-
-//   const can = (perm: string) => {
-//     const perms = user?.permissions || [];
-//     return perms.includes("*") || perms.includes(perm);
-//   };
-
-//   useEffect(() => {
-//     (async () => {
-//       setLoading(true);
-//       const token = await getToken();
-//       if (!token) return router.replace("/login");
-//       setUser((await getStoredUser()) as StoredUser);
-//       setLoading(false);
-//     })();
-//   }, []);
-
-//   if (loading) {
-//     return (
-//       <View style={{ flex: 1, justifyContent: "center" }}>
-//         <ActivityIndicator />
-//         <Text style={{ textAlign: "center", marginTop: 10 }}>Chargement...</Text>
-//       </View>
-//     );
-//   }
-
-//   const KPI = ({
-//     title,
-//     value,
-//     accent,
-//   }: {
-//     title: string;
-//     value: string;
-//     accent: string;
-//   }) => (
-//     <View style={{ flex: 1, minWidth: 150 }}>
-//       <Card leftAccent={accent}>
-//         <Text style={{ fontSize: 20, fontWeight: "900", color: colors.blue }}>{value}</Text>
-//         <Text style={{ color: colors.grayText, marginTop: 4 }}>{title}</Text>
-//       </Card>
-//     </View>
-//   );
-
-//   return (
-//     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-//       {/* Header */}
-//       <View style={{ backgroundColor: colors.blue, padding: 16 }}>
-//         <Text style={{ color: "white", fontSize: 20, fontWeight: "900" }}>
-//           Dashboard Admin
-//         </Text>
-//         <Text style={{ color: "#BFDBFE", marginTop: 4 }}>ID: {user?.sub}</Text>
-
-//         <Pressable
-//           onPress={async () => {
-//             await logout();
-//             router.replace("/login");
-//           }}
-//           style={{
-//             marginTop: 12,
-//             backgroundColor: "rgba(255,255,255,0.15)",
-//             padding: 10,
-//             borderRadius: 12,
-//             alignSelf: "flex-start",
-//           }}
-//         >
-//           <Text style={{ color: "white", fontWeight: "800" }}>Déconnexion</Text>
-//         </Pressable>
-//       </View>
-
-//       {/* Content */}
-//       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 90 }}>
-//         {tab === "dashboard" && (
-//           <>
-//             <Text style={{ fontSize: 20, fontWeight: "900", color: colors.blue, marginBottom: 12 }}>
-//               Vue d'ensemble
-//             </Text>
-
-//             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 as any }}>
-//               <KPI title="Commandes" value="-" accent={colors.blue} />
-//               <KPI title="Revenus" value="-" accent={colors.green} />
-//               <KPI title="Stock Faible" value="-" accent={colors.orange} />
-//               <KPI title="Taux Confirmation" value="-" accent={colors.amber} />
-//             </View>
-
-//             <Card leftAccent={colors.blue} >
-//               <Text style={{ fontSize: 16, fontWeight: "900", color: colors.blue }}>
-//                 Actions rapides
-//               </Text>
-
-//               <View style={{ flexDirection: "row", gap: 10 as any, marginTop: 10 }}>
-//                 {can("PRODUCTS") && (
-//                   <Pressable
-//                     onPress={() => setTab("products")}
-//                     style={{
-//                       flex: 1,
-//                       backgroundColor: colors.blue,
-//                       padding: 12,
-//                       borderRadius: 12,
-//                     }}
-//                   >
-//                     <Text style={{ color: "white", fontWeight: "800", textAlign: "center" }}>
-//                       Produits
-//                     </Text>
-//                   </Pressable>
-//                 )}
-
-//                 {can("ORDERS") && (
-//                   <Pressable
-//                     onPress={() => setTab("orders")}
-//                     style={{
-//                       flex: 1,
-//                       backgroundColor: colors.orange,
-//                       padding: 12,
-//                       borderRadius: 12,
-//                     }}
-//                   >
-//                     <Text style={{ color: "white", fontWeight: "800", textAlign: "center" }}>
-//                       Commandes
-//                     </Text>
-//                   </Pressable>
-//                 )}
-//               </View>
-//             </Card>
-
-//             {/* SuperAdmin فقط */}
-//             {(user?.permissions || []).includes("*") && (
-//               <Pressable
-//                 onPress={() => router.push("/admins")}
-//                 style={{
-//                   marginTop: 14,
-//                   borderWidth: 1,
-//                   borderColor: colors.border,
-//                   padding: 12,
-//                   borderRadius: 14,
-//                   backgroundColor: "white",
-//                 }}
-//               >
-//                 <Text style={{ textAlign: "center", fontWeight: "900", color: colors.blue }}>
-//                   Admins (Super Admin)
-//                 </Text>
-//               </Pressable>
-//             )}
-//           </>
-//         )}
-
-//         {tab === "products" && (
-//           <Card leftAccent={colors.blue}>
-//             <Text style={{ fontWeight: "900", color: colors.blue }}>Produits</Text>
-//             <Text style={{ marginTop: 6, color: colors.grayText }}>
-//               TODO: écran produits (list + add/edit)
-//             </Text>
-//           </Card>
-//         )}
-
-//         {tab === "orders" && (
-//           <Card leftAccent={colors.orange}>
-//             <Text style={{ fontWeight: "900", color: colors.blue }}>Commandes</Text>
-//             <Text style={{ marginTop: 6, color: colors.grayText }}>
-//               TODO: écran commandes (confirmation)
-//             </Text>
-//           </Card>
-//         )}
-
-//         {tab === "stats" && (
-//           <Card leftAccent={colors.amber}>
-//             <Text style={{ fontWeight: "900", color: colors.blue }}>Statistiques</Text>
-//             <Text style={{ marginTop: 6, color: colors.grayText }}>TODO</Text>
-//           </Card>
-//         )}
-//       </ScrollView>
-
-//       {/* Bottom Nav */}
-//       <View
-//         style={{
-//           position: "absolute",
-//           bottom: 0,
-//           left: 0,
-//           right: 0,
-//           backgroundColor: "white",
-//           borderTopWidth: 1,
-//           borderTopColor: colors.border,
-//         }}
-//       >
-//         <View style={{ flexDirection: "row" }}>
-//           {[
-//             { key: "dashboard", label: "Accueil" },
-//             { key: "products", label: "Produits", perm: "PRODUCTS" },
-//             { key: "orders", label: "Commandes", perm: "ORDERS" },
-//             { key: "stats", label: "Stats", perm: "STATS" },
-//           ].map((item) => {
-//             if (item.perm && !can(item.perm)) return null;
-//             const active = tab === (item.key as Tab);
-//             return (
-//               <Pressable
-//                 key={item.key}
-//                 onPress={() => setTab(item.key as Tab)}
-//                 style={{
-//                   flex: 1,
-//                   paddingVertical: 12,
-//                   alignItems: "center",
-//                   backgroundColor: active ? "#EFF6FF" : "white",
-//                 }}
-//               >
-//                 <Text style={{ color: active ? colors.blue : colors.grayText, fontWeight: "800" }}>
-//                   {item.label}
-//                 </Text>
-//               </Pressable>
-//             );
-//           })}
-//         </View>
-//       </View>
-//     </View>
-//   );
-// }
-// apres add permission 
-// dashboard.tsx (COMPLETE) — CRUD permissions (PermissionsMap) version
-// import React, { useEffect, useState } from "react";
-// import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
-// import { useRouter } from "expo-router";
-// import { getStoredUser, getToken, logout } from "../src/services/auth.service";
-// import type { PermissionsMap } from "../src/constants/permissions";
-
-// type Tab = "dashboard" | "products" | "orders" | "stats";
-
-// type StoredUser = {
-//   sub: string;
-//   permissions?: PermissionsMap; // ✅ object
-//   isSuperAdmin?: boolean;       // ✅ boolean
-// };
-
-// const colors = {
-//   blue: "#1E3A8A",
-//   orange: "#F97316",
-//   bg: "#F3F4F6",
-//   white: "#FFFFFF",
-//   grayText: "#6B7280",
-//   border: "#E5E7EB",
-//   green: "#10B981",
-//   amber: "#F59E0B",
-// };
-
-// function Card({
-//   children,
-//   leftAccent,
-// }: {
-//   children: React.ReactNode;
-//   leftAccent?: string;
-// }) {
-//   return (
-//     <View
-//       style={{
-//         backgroundColor: colors.white,
-//         borderRadius: 18,
-//         padding: 16,
-//         borderWidth: 1,
-//         borderColor: colors.border,
-//         borderLeftWidth: leftAccent ? 4 : 1,
-//         borderLeftColor: leftAccent || colors.border,
-//       }}
-//     >
-//       {children}
-//     </View>
-//   );
-// }
-
-// export default function Dashboard() {
-//   const router = useRouter();
-//   const [tab, setTab] = useState<Tab>("dashboard");
-//   const [user, setUser] = useState<StoredUser | null>(null);
-//   const [loading, setLoading] = useState(true);
-
-//   const can = (moduleKey: string, action: "read" | "create" | "update" | "delete") => {
-//   if (user?.isSuperAdmin) return true;
-//   const perms = user?.permissions || [];
-//   return perms.some((p) => p.module === moduleKey && p.action === action);
-// };
-
-
-//   useEffect(() => {
-//     (async () => {
-//       setLoading(true);
-//       const token = await getToken();
-//       if (!token) {
-//         router.replace("/login");
-//         return;
-//       }
-//       setUser((await getStoredUser()) as StoredUser);
-//       setLoading(false);
-//     })();
-//   }, []);
-
-//   if (loading) {
-//     return (
-//       <View style={{ flex: 1, justifyContent: "center" }}>
-//         <ActivityIndicator />
-//         <Text style={{ textAlign: "center", marginTop: 10 }}>Chargement...</Text>
-//       </View>
-//     );
-//   }
-
-//   const KPI = ({
-//     title,
-//     value,
-//     accent,
-//   }: {
-//     title: string;
-//     value: string;
-//     accent: string;
-//   }) => (
-//     <View style={{ flex: 1, minWidth: 150 }}>
-//       <Card leftAccent={accent}>
-//         <Text style={{ fontSize: 20, fontWeight: "900", color: colors.blue }}>{value}</Text>
-//         <Text style={{ color: colors.grayText, marginTop: 4 }}>{title}</Text>
-//       </Card>
-//     </View>
-//   );
-
-//   // ✅ Bottom nav config with "can" function per tab
-//   const NAV: { key: Tab; label: string; can?: () => boolean }[] = [
-//     { key: "dashboard", label: "Accueil" },
-//     { key: "products", label: "Produits", can: () => can("products", "read") },
-//     { key: "orders", label: "Commandes", can: () => can("orders", "read") },
-//     { key: "stats", label: "Stats", can: () => can("stats", "read") },
-//   ];
-
-//   return (
-//     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-//       {/* Header */}
-//       <View style={{ backgroundColor: colors.blue, padding: 16 }}>
-//         <Text style={{ color: "white", fontSize: 20, fontWeight: "900" }}>
-//           Dashboard Admin
-//         </Text>
-//         <Text style={{ color: "#BFDBFE", marginTop: 4 }}>ID: {user?.sub}</Text>
-
-//         <Pressable
-//           onPress={async () => {
-//             await logout();
-//             router.replace("/login");
-//           }}
-//           style={{
-//             marginTop: 12,
-//             backgroundColor: "rgba(255,255,255,0.15)",
-//             padding: 10,
-//             borderRadius: 12,
-//             alignSelf: "flex-start",
-//           }}
-//         >
-//           <Text style={{ color: "white", fontWeight: "800" }}>Déconnexion</Text>
-//         </Pressable>
-//       </View>
-
-//       {/* Content */}
-//       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 90 }}>
-//         {tab === "dashboard" && (
-//           <>
-//             <Text style={{ fontSize: 20, fontWeight: "900", color: colors.blue, marginBottom: 12 }}>
-//               Vue d'ensemble
-//             </Text>
-
-//             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 as any }}>
-//               <KPI title="Commandes" value="-" accent={colors.blue} />
-//               <KPI title="Revenus" value="-" accent={colors.green} />
-//               <KPI title="Stock Faible" value="-" accent={colors.orange} />
-//               <KPI title="Taux Confirmation" value="-" accent={colors.amber} />
-//             </View>
-
-//             <Card leftAccent={colors.blue}>
-//               <Text style={{ fontSize: 16, fontWeight: "900", color: colors.blue }}>
-//                 Actions rapides
-//               </Text>
-
-//               <View style={{ flexDirection: "row", gap: 10 as any, marginTop: 10 }}>
-//                 {can("products", "read") && (
-//                   <Pressable
-//                     onPress={() => setTab("products")}
-//                     style={{
-//                       flex: 1,
-//                       backgroundColor: colors.blue,
-//                       padding: 12,
-//                       borderRadius: 12,
-//                     }}
-//                   >
-//                     <Text style={{ color: "white", fontWeight: "800", textAlign: "center" }}>
-//                       Produits
-//                     </Text>
-//                   </Pressable>
-//                 )}
-
-//                 {can("orders", "read") && (
-//                   <Pressable
-//                     onPress={() => setTab("orders")}
-//                     style={{
-//                       flex: 1,
-//                       backgroundColor: colors.orange,
-//                       padding: 12,
-//                       borderRadius: 12,
-//                     }}
-//                   >
-//                     <Text style={{ color: "white", fontWeight: "800", textAlign: "center" }}>
-//                       Commandes
-//                     </Text>
-//                   </Pressable>
-//                 )}
-//               </View>
-//             </Card>
-
-//             {/* ✅ SuperAdmin only */}
-//             {user?.isSuperAdmin && (
-//               <Pressable
-//                 onPress={() => router.push("/admins")}
-//                 style={{
-//                   marginTop: 14,
-//                   borderWidth: 1,
-//                   borderColor: colors.border,
-//                   padding: 12,
-//                   borderRadius: 14,
-//                   backgroundColor: "white",
-//                 }}
-//               >
-//                 <Text style={{ textAlign: "center", fontWeight: "900", color: colors.blue }}>
-//                   Admins (Super Admin)
-//                 </Text>
-//               </Pressable>
-//             )}
-//           </>
-//         )}
-
-//         {tab === "products" && (
-//           <Card leftAccent={colors.blue}>
-//             <Text style={{ fontWeight: "900", color: colors.blue }}>Produits</Text>
-//             <Text style={{ marginTop: 6, color: colors.grayText }}>
-//               TODO: écran produits (list + add/edit)
-//             </Text>
-//           </Card>
-//         )}
-
-//         {tab === "orders" && (
-//           <Card leftAccent={colors.orange}>
-//             <Text style={{ fontWeight: "900", color: colors.blue }}>Commandes</Text>
-//             <Text style={{ marginTop: 6, color: colors.grayText }}>
-//               TODO: écran commandes (confirmation)
-//             </Text>
-//           </Card>
-//         )}
-
-//         {tab === "stats" && (
-//           <Card leftAccent={colors.amber}>
-//             <Text style={{ fontWeight: "900", color: colors.blue }}>Statistiques</Text>
-//             <Text style={{ marginTop: 6, color: colors.grayText }}>TODO</Text>
-//           </Card>
-//         )}
-//       </ScrollView>
-
-//       {/* Bottom Nav */}
-//       <View
-//         style={{
-//           position: "absolute",
-//           bottom: 0,
-//           left: 0,
-//           right: 0,
-//           backgroundColor: "white",
-//           borderTopWidth: 1,
-//           borderTopColor: colors.border,
-//         }}
-//       >
-//         <View style={{ flexDirection: "row" }}>
-//           {NAV.map((item) => {
-//             if (item.can && !item.can()) return null;
-
-//             const active = tab === item.key;
-//             return (
-//               <Pressable
-//                 key={item.key}
-//                 onPress={() => setTab(item.key)}
-//                 style={{
-//                   flex: 1,
-//                   paddingVertical: 12,
-//                   alignItems: "center",
-//                   backgroundColor: active ? "#EFF6FF" : "white",
-//                 }}
-//               >
-//                 <Text style={{ color: active ? colors.blue : colors.grayText, fontWeight: "800" }}>
-//                   {item.label}
-//                 </Text>
-//               </Pressable>
-//             );
-//           })}
-//         </View>
-//       </View>
-//     </View>
-//   );
-// }
-// dashboard.tsx — backend NEW (permissions array [{module, action}])
-// import React, { useEffect, useState } from "react";
-// import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
-// import { useRouter } from "expo-router";
-// import { getStoredUser, getToken, logout } from "../src/services/auth.service";
-// import type { UserPermission, CrudAction } from "../src/constants/permissions";
-
-// type Tab = "dashboard" | "products" | "orders" | "stats";
-
-// type StoredUser = {
-//   sub: string;
-//   permissions?: UserPermission[]; // ✅ array
-//   isSuperAdmin?: boolean;
-// };
-
-// const colors = {
-//   blue: "#1E3A8A",
-//   orange: "#F97316",
-//   bg: "#F3F4F6",
-//   white: "#FFFFFF",
-//   grayText: "#6B7280",
-//   border: "#E5E7EB",
-//   green: "#10B981",
-//   amber: "#F59E0B",
-// };
-
-// function Card({
-//   children,
-//   leftAccent,
-// }: {
-//   children: React.ReactNode;
-//   leftAccent?: string;
-// }) {
-//   return (
-//     <View
-//       style={{
-//         backgroundColor: colors.white,
-//         borderRadius: 18,
-//         padding: 16,
-//         borderWidth: 1,
-//         borderColor: colors.border,
-//         borderLeftWidth: leftAccent ? 4 : 1,
-//         borderLeftColor: leftAccent || colors.border,
-//       }}
-//     >
-//       {children}
-//     </View>
-//   );
-// }
-
-// export default function Dashboard() {
-//   const router = useRouter();
-//   const [tab, setTab] = useState<Tab>("dashboard");
-//   const [user, setUser] = useState<StoredUser | null>(null);
-//   const [loading, setLoading] = useState(true);
-
-//   // ✅ matches backend: permissions = [{module, action}]
-//   const can = (moduleKey: string, action: CrudAction) => {
-//     if (user?.isSuperAdmin) return true;
-//     const perms = user?.permissions || [];
-//     return perms.some((p) => p.module === moduleKey && p.action === action);
-//   };
-
-//   useEffect(() => {
-//     (async () => {
-//       setLoading(true);
-//       const token = await getToken();
-//       if (!token) {
-//         router.replace("/login");
-//         return;
-//       }
-//       setUser((await getStoredUser()) as StoredUser);
-//       setLoading(false);
-//     })();
-//   }, []);
-
-//   if (loading) {
-//     return (
-//       <View style={{ flex: 1, justifyContent: "center" }}>
-//         <ActivityIndicator />
-//         <Text style={{ textAlign: "center", marginTop: 10 }}>Chargement...</Text>
-//       </View>
-//     );
-//   }
-
-//   const KPI = ({
-//     title,
-//     value,
-//     accent,
-//   }: {
-//     title: string;
-//     value: string;
-//     accent: string;
-//   }) => (
-//     <View style={{ flex: 1, minWidth: 150 }}>
-//       <Card leftAccent={accent}>
-//         <Text style={{ fontSize: 20, fontWeight: "900", color: colors.blue }}>{value}</Text>
-//         <Text style={{ color: colors.grayText, marginTop: 4 }}>{title}</Text>
-//       </Card>
-//     </View>
-//   );
-
-//   const NAV: { key: Tab; label: string; can?: () => boolean }[] = [
-//     { key: "dashboard", label: "Accueil" },
-//     { key: "products", label: "Produits", can: () => can("products", "read") },
-//     { key: "orders", label: "Commandes", can: () => can("orders", "read") },
-//     { key: "stats", label: "Stats", can: () => can("stats", "read") },
-//   ];
-
-//   return (
-//     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-//       {/* Header */}
-//       <View style={{ backgroundColor: colors.blue, padding: 16 }}>
-//         <Text style={{ color: "white", fontSize: 20, fontWeight: "900" }}>
-//           Dashboard Admin
-//         </Text>
-//         <Text style={{ color: "#BFDBFE", marginTop: 4 }}>ID: {user?.sub}</Text>
-
-//         <Pressable
-//           onPress={async () => {
-//             await logout();
-//             router.replace("/login");
-//           }}
-//           style={{
-//             marginTop: 12,
-//             backgroundColor: "rgba(255,255,255,0.15)",
-//             padding: 10,
-//             borderRadius: 12,
-//             alignSelf: "flex-start",
-//           }}
-//         >
-//           <Text style={{ color: "white", fontWeight: "800" }}>Déconnexion</Text>
-//         </Pressable>
-//       </View>
-
-//       {/* Content */}
-//       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 90 }}>
-//         {tab === "dashboard" && (
-//           <>
-//             <Text style={{ fontSize: 20, fontWeight: "900", color: colors.blue, marginBottom: 12 }}>
-//               Vue d'ensemble
-//             </Text>
-
-//             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 as any }}>
-//               <KPI title="Commandes" value="-" accent={colors.blue} />
-//               <KPI title="Revenus" value="-" accent={colors.green} />
-//               <KPI title="Stock Faible" value="-" accent={colors.orange} />
-//               <KPI title="Taux Confirmation" value="-" accent={colors.amber} />
-//             </View>
-
-//             <Card leftAccent={colors.blue}>
-//               <Text style={{ fontSize: 16, fontWeight: "900", color: colors.blue }}>
-//                 Actions rapides
-//               </Text>
-
-//               <View style={{ flexDirection: "row", gap: 10 as any, marginTop: 10 }}>
-//                 {can("products", "read") && (
-//                   <Pressable
-//                     onPress={() => setTab("products")}
-//                     style={{
-//                       flex: 1,
-//                       backgroundColor: colors.blue,
-//                       padding: 12,
-//                       borderRadius: 12,
-//                     }}
-//                   >
-//                     <Text style={{ color: "white", fontWeight: "800", textAlign: "center" }}>
-//                       Produits
-//                     </Text>
-//                   </Pressable>
-//                 )}
-
-//                 {can("orders", "read") && (
-//                   <Pressable
-//                     onPress={() => setTab("orders")}
-//                     style={{
-//                       flex: 1,
-//                       backgroundColor: colors.orange,
-//                       padding: 12,
-//                       borderRadius: 12,
-//                     }}
-//                   >
-//                     <Text style={{ color: "white", fontWeight: "800", textAlign: "center" }}>
-//                       Commandes
-//                     </Text>
-//                   </Pressable>
-//                 )}
-//               </View>
-//             </Card>
-
-//             {/* ✅ SuperAdmin only */}
-//             {user?.isSuperAdmin && (
-//               <Pressable
-//                 onPress={() => router.push("/admins")}
-//                 style={{
-//                   marginTop: 14,
-//                   borderWidth: 1,
-//                   borderColor: colors.border,
-//                   padding: 12,
-//                   borderRadius: 14,
-//                   backgroundColor: "white",
-//                 }}
-//               >
-//                 <Text style={{ textAlign: "center", fontWeight: "900", color: colors.blue }}>
-//                   Admins (Super Admin)
-//                 </Text>
-//               </Pressable>
-//             )}
-//           </>
-//         )}
-
-//         {tab === "products" && (
-//           <Card leftAccent={colors.blue}>
-//             <Text style={{ fontWeight: "900", color: colors.blue }}>Produits</Text>
-//             <Text style={{ marginTop: 6, color: colors.grayText }}>
-//               TODO: écran produits (list + add/edit)
-//             </Text>
-//           </Card>
-//         )}
-
-//         {tab === "orders" && (
-//           <Card leftAccent={colors.orange}>
-//             <Text style={{ fontWeight: "900", color: colors.blue }}>Commandes</Text>
-//             <Text style={{ marginTop: 6, color: colors.grayText }}>
-//               TODO: écran commandes (confirmation)
-//             </Text>
-//           </Card>
-//         )}
-
-//         {tab === "stats" && (
-//           <Card leftAccent={colors.amber}>
-//             <Text style={{ fontWeight: "900", color: colors.blue }}>Statistiques</Text>
-//             <Text style={{ marginTop: 6, color: colors.grayText }}>TODO</Text>
-//           </Card>
-//         )}
-//         {user?.isSuperAdmin && (
-//   <Pressable
-//     onPress={() => router.push("/permissions")}
-//     style={{
-//       marginTop: 12,
-//       borderWidth: 1,
-//       borderColor: colors.border,
-//       padding: 12,
-//       borderRadius: 14,
-//       backgroundColor: "white",
-//     }}
-//   >
-//     <Text style={{ textAlign: "center", fontWeight: "900", color: colors.blue }}>
-//       Permissions
-//     </Text>
-//   </Pressable>
-// )}
-
-//       </ScrollView>
-
-//       {/* Bottom Nav */}
-//       <View
-//         style={{
-//           position: "absolute",
-//           bottom: 0,
-//           left: 0,
-//           right: 0,
-//           backgroundColor: "white",
-//           borderTopWidth: 1,
-//           borderTopColor: colors.border,
-//         }}
-//       >
-//         <View style={{ flexDirection: "row" }}>
-//           {NAV.map((item) => {
-//             if (item.can && !item.can()) return null;
-
-//             const active = tab === item.key;
-//             return (
-//               <Pressable
-//                 key={item.key}
-//                 onPress={() => setTab(item.key)}
-//                 style={{
-//                   flex: 1,
-//                   paddingVertical: 12,
-//                   alignItems: "center",
-//                   backgroundColor: active ? "#EFF6FF" : "white",
-//                 }}
-//               >
-//                 <Text style={{ color: active ? colors.blue : colors.grayText, fontWeight: "800" }}>
-//                   {item.label}
-//                 </Text>
-//               </Pressable>
-//             );
-//           })}
-//         </View>
-//       </View>
-//     </View>
-//   );
-// }
-
-
-
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
   ActivityIndicator,
-  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
   useWindowDimensions,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import Svg, { Circle, Line, Polyline, Text as SvgText } from "react-native-svg";
 import { getStoredUser, getToken, logout } from "../src/services/auth.service";
+import { getDashboardSummary } from "../src/services/dashboard.service";
+import { getApplicationIntegrations } from "../src/services/application-integrations.service";
+import { playNewOrderAlert } from "../src/services/order-alert.service";
+import { useAdminShell } from "../src/context/AdminShellContext";
+import { colors as themeColors, radii, shadows } from "../src/ui/theme";
+import { Badge } from "../src/ui/atoms";
 
 type CrudAction = "read" | "create" | "update" | "delete";
 type UserPermission = { module: string; action: CrudAction };
-
-type Tab = "dashboard" | "products" | "orders" | "stats";
+type Locale = "fr" | "ar";
 
 type StoredUser = {
   sub: string;
-  permissions?: UserPermission[]; // ✅ array backend new
+  email?: string;
+  permissions?: UserPermission[];
   isSuperAdmin?: boolean;
 };
 
-const colors = {
-  blue: "#1E3A8A",
-  orange: "#F97316",
-  bg: "#F3F4F6",
-  white: "#FFFFFF",
-  grayText: "#6B7280",
-  border: "#E5E7EB",
-  green: "#10B981",
-  amber: "#F59E0B",
-  text: "#0F172A",
-  softBlue: "#EFF6FF",
+type Summary = {
+  today: { leadsCount: number; ordersCount: number; abandonedCount: number; revenue: number };
+  week: { leadsCount: number; ordersCount: number; abandonedCount: number; revenue: number };
+  month: { leadsCount: number; ordersCount: number; abandonedCount: number; revenue: number; label: string; offset: number };
+  totals: {
+    leads: number;
+    orders: number;
+    products: number;
+    users: number;
+    revenue: number;
+    archived: number;
+    deleted: number;
+  };
+  pipeline: {
+    conversionRate: number;
+    abandonmentRate: number;
+    totalLeads: number;
+    realOrders: number;
+    abandonedLeads: number;
+  };
+  tracking: {
+    deliveredPercent: number;
+    returnedPercent: number;
+    confirmedPercent: number;
+    abandonedPercent: number;
+  };
+  traffic: {
+    confirmedCount: number;
+    abandonedCount: number;
+    confirmedPercent: number;
+    abandonedPercent: number;
+  };
+  statuses: {
+    pending: number;
+    attempt1: number;
+    confirmed: number;
+    packed: number;
+    delivered: number;
+    rejected: number;
+    returned: number;
+  };
+  callStats: {
+    pendingCalls: number;
+    followUps: number;
+    answeredRate: number;
+    rejectedAfterCall: number;
+  };
+  productTests: {
+    testedProducts: number;
+    topProducts: { name: string; orders: number; revenue: number }[];
+  };
+  topCities: { city: string; leads: number; orders: number; revenue: number }[];
+  categoryDistribution: { name: string; value: number }[];
+  dailySeries: { label: string; leads: number; orders: number; abandoned: number; revenue: number }[];
 };
 
-function Card({
-  children,
-  style,
-}: {
-  children: React.ReactNode;
-  style?: any;
-}) {
+const colors = {
+  bg: themeColors.bg,
+  card: themeColors.card,
+  text: themeColors.text,
+  muted: themeColors.grayText,
+  border: themeColors.border,
+  primary: themeColors.cobalt,
+  primarySoft: themeColors.cobaltSoft,
+  secondary: themeColors.violet,
+  secondarySoft: themeColors.violetSoft,
+  cyan: themeColors.teal,
+  green: themeColors.green,
+  greenSoft: themeColors.greenSoft,
+  orange: themeColors.orange,
+  orangeSoft: themeColors.orangeSoft,
+  red: themeColors.red,
+  redSoft: themeColors.redSoft,
+  navy: themeColors.navy,
+  navySoft: themeColors.navySoft,
+};
+
+const MODULE_ALIASES: Record<string, string[]> = {
+  orders: ["orders", "order", "commande", "commandes"],
+  products: ["products", "product", "produit", "produits"],
+  admins: ["admins", "admin", "users", "utilisateur", "utilisateurs", "staff"],
+  categories: ["categories", "category", "categorie"],
+  dashboard: ["dashboard", "stats", "statistique", "statistiques"],
+};
+
+const translations = {
+  fr: {
+    dashboardTag: "TABLEAU DE BORD",
+    dashboardTitle: "Pilotage e-commerce",
+    dashboardSubtitle: "Un dashboard clair pour suivre ventes, pipeline et performance sans surcharger l'ecran.",
+    session: "Session",
+    superAdmin: "Super Admin",
+    admin: "Admin",
+    logout: "Deconnexion",
+    languageFr: "FR",
+    languageAr: "AR",
+    orders: "Commandes",
+    revenue: "Revenus",
+    products: "Produits",
+    users: "Utilisateurs",
+    thisMonth: "ce mois",
+    today: "aujourd'hui",
+    topTracked: "tops suivis",
+    leadsCaptured: "leads captures",
+    salesTrend: "Tendance des ventes",
+    salesTrendSub: "Evolution du chiffre d'affaires sur les 10 derniers jours",
+    salesBadge: "Ventes",
+    pipeline: "Vue pipeline",
+    pipelineSub: "Les KPI essentiels pour decider vite",
+    leads: "Leads",
+    abandons: "Abandons",
+    realOrders: "Commandes reelles",
+    conversionRate: "Taux de conversion",
+    abandonmentRate: "Taux d'abandon",
+    deliveryRate: "Taux de livraison",
+    ordersChart: "Commandes",
+    ordersChartSub: "Nombre de commandes sur tout le mois affiche",
+    currentMonth: "Mois affiche",
+    previousMonth: "Mois precedent",
+    nextMonth: "Mois suivant",
+    ordersBadge: "Commandes / Abandons",
+    totalOrdersBadge: "commandes",
+    yLegend: "Nombre de commandes",
+    xLegend: "Nombre de commandes sur le mois affiche",
+    tooltipOrders: "Commandes",
+    tooltipAbandons: "Abandons",
+    integrations: "Integrations & analyse produit",
+    integrationsSub: "Etat marketing et top produits du mois",
+    active: "actives",
+    connected: "Connecte",
+    notConnected: "Non connecte",
+    activeApps: "Applications actives",
+    productSalesTests: "ventes / tests",
+    otherSpaces: "Autres espaces",
+    otherSpacesSub: "Les statistiques detaillees restent dans les modules metier pour garder ce dashboard court et utile.",
+    navOrders: "Commandes",
+    navOrdersDesc: "Workflow, relances et details",
+    navProducts: "Produits",
+    navProductsDesc: "Catalogue, categories et stock",
+    navAdmins: "Admins",
+    navAdminsDesc: "Equipe, roles et permissions",
+    navApps: "Applications",
+    navAppsDesc: "Pixels, analytics et tracking",
+    navDelivery: "Livraison",
+    navDeliveryDesc: "Societes et configurations",
+    loading: "Chargement du dashboard...",
+  },
+  ar: {
+    dashboardTag: "???? ??????",
+    dashboardTitle: "????? ??????? ???????????",
+    dashboardSubtitle: "???? ????? ??????? ???????? ????? ??????? ??????? ???? ?????? ?? ???????.",
+    session: "??????",
+    superAdmin: "???? ???",
+    admin: "????",
+    logout: "????? ??????",
+    languageFr: "FR",
+    languageAr: "AR",
+    orders: "???????",
+    revenue: "????????",
+    products: "????????",
+    users: "??????????",
+    thisMonth: "??? ?????",
+    today: "?????",
+    topTracked: "?????? ??????",
+    leadsCaptured: "????? ???????",
+    salesTrend: "????? ????????",
+    salesTrendSub: "???? ??? ????????? ???? ??? 10 ????",
+    salesBadge: "????????",
+    pipeline: "???? ??????",
+    pipelineSub: "???????? ???????? ?????? ?????? ?????",
+    leads: "??????? ?????????",
+    abandons: "????????",
+    realOrders: "??????? ???????",
+    conversionRate: "???? ???????",
+    abandonmentRate: "???? ??????",
+    deliveryRate: "???? ???????",
+    ordersChart: "???????",
+    ordersChartSub: "عدد الطلبات خلال كامل الشهر المعروض",
+    currentMonth: "الشهر المعروض",
+    previousMonth: "الشهر السابق",
+    nextMonth: "الشهر التالي",
+    ordersBadge: "????? / ??????",
+    totalOrdersBadge: "???",
+    yLegend: "??? ???????",
+    xLegend: "عدد الطلبات خلال الشهر المعروض",
+    tooltipOrders: "???????",
+    tooltipAbandons: "????????",
+    integrations: "????????? ?????? ????????",
+    integrationsSub: "???? ??????? ????????? ?????? ??? ?????",
+    active: "????",
+    connected: "????",
+    notConnected: "??? ????",
+    activeApps: "??????? ????",
+    productSalesTests: "?????? / ????????",
+    otherSpaces: "?????? ????",
+    otherSpacesSub: "????????? ????????? ???? ???? ??????? ?????? ??? ???? ?????? ??????.",
+    navOrders: "???????",
+    navOrdersDesc: "???????? ?????????? ?????????",
+    navProducts: "????????",
+    navProductsDesc: "???????? ?????????? ????????",
+    navAdmins: "????????",
+    navAdminsDesc: "?????? ???????? ??????????",
+    navApps: "?????????",
+    navAppsDesc: "????????? ??????? ????????",
+    navDelivery: "???????",
+    navDeliveryDesc: "??????? ??????????",
+    loading: "???? ????? ???? ??????...",
+  },
+} as const;
+
+type DashboardTexts = Record<keyof typeof translations.fr, string>;
+
+function formatMoney(value: number) {
+  return `${Number(value || 0).toFixed(2)} TND`;
+}
+
+function Surface({ children, style }: { children: React.ReactNode; style?: any }) {
   return (
     <View
       style={[
         {
-          backgroundColor: colors.white,
-          borderRadius: 18,
-          padding: 16,
+          backgroundColor: colors.card,
+          borderRadius: radii.lg,
+          padding: 18,
           borderWidth: 1,
           borderColor: colors.border,
+          ...(shadows.card as object),
         },
         style,
       ]}
@@ -896,358 +266,476 @@ function Card({
   );
 }
 
-function Pill({
-  label,
-  tone = "blue",
-}: {
-  label: string;
-  tone?: "blue" | "green" | "orange" | "amber";
-}) {
-  const bg =
-    tone === "green"
-      ? "#ECFDF5"
-      : tone === "orange"
-      ? "#FFF7ED"
-      : tone === "amber"
-      ? "#FFFBEB"
-      : "#EFF6FF";
-
-  const text =
-    tone === "green"
-      ? "#065F46"
-      : tone === "orange"
-      ? "#9A3412"
-      : tone === "amber"
-      ? "#92400E"
-      : colors.blue;
-
+function StatCard({ title, value, subtitle, gradient }: { title: string; value: string; subtitle: string; gradient: string[] }) {
   return (
-    <View
-      style={{
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 999,
-        backgroundColor: bg,
-        borderWidth: 1,
-        borderColor: "#E5E7EB",
-        alignSelf: "flex-start",
-      }}
-    >
-      <Text style={{ color: text, fontWeight: "900", fontSize: 12 }}>{label}</Text>
+    <LinearGradient colors={gradient as [string, string]} style={{ borderRadius: 28, padding: 18, minHeight: 138 }}>
+      <Text style={{ color: "rgba(255,255,255,0.78)", fontWeight: "700" }}>{title}</Text>
+      <Text style={{ color: "white", fontSize: 28, fontWeight: "900", marginTop: 18 }}>{value}</Text>
+      <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: "700", marginTop: 10 }}>{subtitle}</Text>
+    </LinearGradient>
+  );
+}
+
+function SectionHeader({ title, subtitle, badge }: { title: string; subtitle?: string; badge?: string }) {
+  return (
+    <View style={{ marginBottom: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "900" }}>{title}</Text>
+        {subtitle ? <Text style={{ color: colors.muted, marginTop: 4 }}>{subtitle}</Text> : null}
+      </View>
+      {badge ? (
+        <View style={{ backgroundColor: colors.primarySoft, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 }}>
+          <Text style={{ color: colors.primary, fontWeight: "900", fontSize: 12 }}>{badge}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
 
-export default function Dashboard() {
+function MiniMetric({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+      <Text style={{ color: colors.muted, fontWeight: "700" }}>{label}</Text>
+      <Text style={{ color: color || colors.text, fontWeight: "900" }}>{value}</Text>
+    </View>
+  );
+}
+
+function InsightTile({ title, value, accent, bg }: { title: string; value: string; accent: string; bg: string }) {
+  return (
+    <View style={{ flex: 1, minHeight: 92, borderRadius: 22, backgroundColor: bg, padding: 16, borderWidth: 1, borderColor: colors.border }}>
+      <Text style={{ color: colors.muted, fontWeight: "700" }}>{title}</Text>
+      <Text style={{ color: accent, fontWeight: "900", fontSize: 24, marginTop: 14 }}>{value}</Text>
+    </View>
+  );
+}
+
+function ProductAnalyticsCard({ title, revenue, orders, locale, texts }: { title: string; revenue: number; orders: number; locale: Locale; texts: DashboardTexts }) {
+  return (
+    <View style={{ borderRadius: 20, backgroundColor: colors.primarySoft, padding: 14, marginBottom: 10 }}>
+      <Text style={{ color: colors.text, fontWeight: "900", fontSize: 15, textAlign: locale === "ar" ? "right" : "left" }}>{title}</Text>
+      <Text style={{ color: colors.muted, marginTop: 4, textAlign: locale === "ar" ? "right" : "left" }}>{orders} {texts.productSalesTests}</Text>
+      <Text style={{ color: colors.primary, marginTop: 8, fontWeight: "900", fontSize: 18, textAlign: locale === "ar" ? "right" : "left" }}>{formatMoney(revenue)}</Text>
+    </View>
+  );
+}
+
+function OrdersBarsChart({
+  series,
+  width,
+  texts,
+}: {
+  series: Summary["dailySeries"];
+  width: number;
+  texts: DashboardTexts;
+}) {
+  const chartSeries = series.map((item) => ({
+    label: item.label,
+    orders: Number(item.orders || 0),
+    revenue: Number(item.revenue || 0),
+  }));
+  const firstPositiveIndex = chartSeries.findIndex((item) => item.orders > 0);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(firstPositiveIndex >= 0 ? firstPositiveIndex : null);
+  const chartHeight = 352;
+  const graphHeight = 224;
+  const barWidth = 72;
+  const gap = 18;
+  const leftGutter = 42;
+  const contentWidth = Math.max(width, leftGutter + chartSeries.length * (barWidth + gap) + 24);
+  const maxOrders = Math.max(...chartSeries.map((item) => item.orders), 1);
+  const step = Math.max(1, Math.ceil(maxOrders / 6));
+  const topTick = step * 6;
+  const yTicks = Array.from({ length: 7 }, (_, index) => topTick - index * step);
+  const selectedItem = selectedIndex !== null ? chartSeries[selectedIndex] : null;
+  const tooltipLeft = selectedIndex !== null ? leftGutter + selectedIndex * (barWidth + gap) : 0;
+
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 12 }}>
+      <View style={{ width: contentWidth, height: chartHeight, position: "relative" }}>
+        <View style={{ position: "absolute", left: 0, top: 46, width: leftGutter, height: graphHeight, justifyContent: "space-between" }}>
+          {yTicks.map((tick, index) => (
+            <Text key={`${tick}-${index}`} style={{ color: colors.muted, fontWeight: "700", fontSize: 12, textAlign: "right", paddingRight: 8 }}>
+              {tick}
+            </Text>
+          ))}
+        </View>
+
+        <View style={{ marginLeft: leftGutter, marginTop: 46, height: graphHeight, justifyContent: "space-between" }}>
+          {yTicks.map((_, index) => (
+            <View key={index} style={{ borderTopWidth: 1, borderTopColor: colors.border }} />
+          ))}
+        </View>
+
+        <View style={{ position: "absolute", left: leftGutter, top: 0, flexDirection: "row", alignItems: "flex-end", gap }}>
+          {chartSeries.map((item, index) => {
+            const orders = item.orders;
+            const revenue = item.revenue;
+            const barHeight = Math.max(orders > 0 ? 16 : 0, (orders / maxOrders) * graphHeight);
+            const selected = index === selectedIndex;
+            return (
+              <View key={`${item.label}-${index}`} style={{ width: barWidth, alignItems: "center", paddingTop: 18 }}>
+                <Text style={{ color: colors.text, fontWeight: "900", fontSize: 12, marginBottom: 12, minHeight: 20 }}>
+                  {revenue > 0 ? `${Math.round(revenue)} TND` : ""}
+                </Text>
+                <Pressable onPress={() => setSelectedIndex(index)} style={{ alignItems: "center" }}>
+                  <View
+                    style={{
+                      width: barWidth,
+                      height: graphHeight,
+                      justifyContent: "flex-end",
+                      alignItems: "center",
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: barWidth - 10,
+                        height: barHeight,
+                        borderRadius: 18,
+                        backgroundColor: colors.secondary,
+                        opacity: selected ? 1 : 0.92,
+                      }}
+                    />
+                  </View>
+                  <Text style={{ color: colors.muted, fontWeight: "700", fontSize: 12, marginTop: 14 }}>{item.label}</Text>
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+
+        {selectedItem ? (
+          <View
+            style={{
+              position: "absolute",
+              top: 72,
+              left: Math.min(Math.max(tooltipLeft + 8, leftGutter + 8), contentWidth - 172),
+              minWidth: 146,
+              borderRadius: 18,
+              backgroundColor: colors.card,
+              borderWidth: 1,
+              borderColor: colors.border,
+              padding: 14,
+              shadowColor: "#0F172A",
+              shadowOpacity: 0.12,
+              shadowRadius: 18,
+              shadowOffset: { width: 0, height: 8 },
+              elevation: 4,
+              zIndex: 12,
+            }}
+          >
+            <Text style={{ color: colors.text, fontWeight: "900", fontSize: 16 }}>{selectedItem.label}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 }}>
+              <View style={{ width: 12, height: 12, borderRadius: 999, backgroundColor: colors.secondary }} />
+              <Text style={{ color: colors.muted, fontSize: 15 }}>{texts.tooltipOrders}: {selectedItem.orders}</Text>
+            </View>
+            <Text style={{ color: colors.text, fontWeight: "900", marginTop: 10 }}>{formatMoney(selectedItem.revenue)}</Text>
+          </View>
+        ) : null}
+
+        <Text style={{ position: "absolute", left: leftGutter, top: 2, color: colors.muted, fontWeight: "800", fontSize: 13 }}>
+          {texts.yLegend}
+        </Text>
+      </View>
+    </ScrollView>
+  );
+}
+
+function SalesTrendChart({
+  series,
+  width,
+}: {
+  series: Summary["dailySeries"];
+  width: number;
+}) {
+  const chartWidth = Math.max(420, width);
+  const chartHeight = 280;
+  const leftPadding = 34;
+  const rightPadding = 18;
+  const topPadding = 18;
+  const bottomPadding = 38;
+  const innerWidth = chartWidth - leftPadding - rightPadding;
+  const innerHeight = chartHeight - topPadding - bottomPadding;
+  const values = series.map((item) => Number(item.revenue || 0));
+  const maxValue = Math.max(...values, 1);
+  const ticks = Array.from({ length: 5 }, (_, index) => Math.round((maxValue / 4) * (4 - index)));
+  const stepX = series.length > 1 ? innerWidth / (series.length - 1) : innerWidth;
+
+  const points = series.map((item, index) => {
+    const x = leftPadding + index * stepX;
+    const y = topPadding + innerHeight - (Number(item.revenue || 0) / maxValue) * innerHeight;
+    return { x, y, label: item.label };
+  });
+
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <Svg width={chartWidth} height={chartHeight}>
+        {ticks.map((tick, index) => {
+          const y = topPadding + (innerHeight / 4) * index;
+          return (
+            <React.Fragment key={`tick-${tick}-${index}`}>
+              <Line x1={leftPadding} y1={y} x2={chartWidth - rightPadding} y2={y} stroke={colors.border} strokeWidth={1} />
+              <SvgText x={leftPadding - 8} y={y + 4} fontSize="11" fill={colors.muted} textAnchor="end">
+                {tick}
+              </SvgText>
+            </React.Fragment>
+          );
+        })}
+
+        <Polyline
+          points={points.map((point) => `${point.x},${point.y}`).join(" ")}
+          fill="none"
+          stroke={colors.primary}
+          strokeWidth={3}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+
+        {points.map((point) => (
+          <React.Fragment key={`point-${point.label}`}>
+            <Circle cx={point.x} cy={point.y} r={4} fill={colors.primary} />
+            <SvgText x={point.x} y={chartHeight - 10} fontSize="11" fill={colors.muted} textAnchor="middle">
+              {point.label}
+            </SvgText>
+          </React.Fragment>
+        ))}
+      </Svg>
+    </ScrollView>
+  );
+}
+
+export default function DashboardScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isWide = width >= 900;
-
-  const [tab, setTab] = useState<Tab>("dashboard");
+  const isDesktop = width >= 1200;
+  const isTablet = width >= 768;
+  const { locale } = useAdminShell();
+  const [monthOffset, setMonthOffset] = useState(0);
   const [user, setUser] = useState<StoredUser | null>(null);
+  const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [integrationStats, setIntegrationStats] = useState({
+    facebookEnabled: false,
+    gaEnabled: false,
+    activeApps: 0,
+  });
+  const hasBootstrappedAlertRef = useRef(false);
+  const knownLeadCountRef = useRef(0);
+  const texts = translations[locale];
 
-  const can = (moduleKey: string, action: CrudAction) => {
-    if (user?.isSuperAdmin) return true;
-    const perms = user?.permissions || [];
-    return perms.some((p) => p.module === moduleKey && p.action === action);
+  const can = (moduleName: string, action: CrudAction, currentUser = user) => {
+    if (currentUser?.isSuperAdmin) return true;
+    const aliases = MODULE_ALIASES[moduleName] || [moduleName];
+    return (currentUser?.permissions || []).some(
+      (permission) =>
+        aliases.includes(String(permission.module || "").trim().toLowerCase()) &&
+        String(permission.action || "").trim().toLowerCase() === action,
+    );
+  };
+
+  const load = async (silent = false, targetOffset = monthOffset) => {
+    if (!silent) setLoading(true);
+    try {
+      const token = await getToken();
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
+      const [storedUser, dashboardSummary] = await Promise.all([getStoredUser(), getDashboardSummary(targetOffset)]);
+      const normalizedUser = storedUser as StoredUser | null;
+      setUser(normalizedUser);
+      setSummary(dashboardSummary as Summary);
+
+      if (normalizedUser?.isSuperAdmin) {
+        const applications = await getApplicationIntegrations();
+        setIntegrationStats({
+          facebookEnabled: applications.some((item) => item.integration.id === "facebook" && item.config.enabled),
+          gaEnabled: applications.some((item) => item.integration.id === "google-analytics" && item.config.enabled),
+          activeApps: applications.filter((item) => item.config.enabled).length,
+        });
+      } else {
+        setIntegrationStats({ facebookEnabled: false, gaEnabled: false, activeApps: 0 });
+      }
+
+      const nextLeadCount = Number((dashboardSummary as Summary).totals?.leads || 0);
+      const hasNewLead = hasBootstrappedAlertRef.current && nextLeadCount > knownLeadCountRef.current;
+      knownLeadCountRef.current = nextLeadCount;
+      hasBootstrappedAlertRef.current = true;
+
+      if (hasNewLead) {
+        await playNewOrderAlert();
+      }
+    } catch (error) {
+      if ((error as { response?: { status?: number } })?.response?.status === 401) {
+        await logout();
+        router.replace("/login");
+        return;
+      }
+      console.error(error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const token = await getToken();
-      if (!token) return router.replace("/login");
-      setUser((await getStoredUser()) as StoredUser);
-      setLoading(false);
-    })();
-  }, []);
+    load(false, monthOffset);
+  }, [monthOffset]);
 
-  const title = useMemo(() => "Dashboard", []);
+  useEffect(() => {
+    const interval = setInterval(() => load(true, monthOffset), 15000);
+    return () => clearInterval(interval);
+  }, [monthOffset]);
 
-  if (loading) {
+  const hasOrdersAccess = can("orders", "read");
+  const hasProductsAccess = can("products", "read");
+  const hasAdminsAccess = can("admins", "read");
+  const isSuperAdmin = !!user?.isSuperAdmin;
+
+  if (loading || !summary) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", backgroundColor: colors.bg }}>
-        <ActivityIndicator />
-        <Text style={{ textAlign: "center", marginTop: 10, color: colors.grayText }}>
-          Chargement...
-        </Text>
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size='large' color={colors.primary} />
+        <Text style={{ marginTop: 10, color: colors.muted }}>{texts.loading}</Text>
       </View>
     );
   }
 
-  // ✅ KPI cards (horizontal scroll to avoid heavy layout)
-  const KPI = ({
-    label,
-    value,
-    tone,
-  }: {
-    label: string;
-    value: string;
-    tone: "blue" | "green" | "orange" | "amber";
-  }) => (
-    <View style={{ width: 220, marginRight: 12 }}>
-      <Card style={{ borderRadius: 20 }}>
-        <Pill label={label} tone={tone} />
-        <Text style={{ fontSize: 26, fontWeight: "900", color: colors.text, marginTop: 10 }}>
-          {value}
-        </Text>
-        <Text style={{ color: colors.grayText, marginTop: 4, fontWeight: "700" }}>
-          Aujourd’hui
-        </Text>
-      </Card>
-    </View>
-  );
-
-  const ActionCard = ({
-    title,
-    desc,
-    tone,
-    onPress,
-  }: {
-    title: string;
-    desc: string;
-    tone: "blue" | "orange" | "green" | "amber";
-    onPress: () => void;
-  }) => {
-    const bg =
-      tone === "green"
-        ? "#ECFDF5"
-        : tone === "orange"
-        ? "#FFF7ED"
-        : tone === "amber"
-        ? "#FFFBEB"
-        : "#EFF6FF";
-
-    const border =
-      tone === "green"
-        ? "#A7F3D0"
-        : tone === "orange"
-        ? "#FED7AA"
-        : tone === "amber"
-        ? "#FDE68A"
-        : "#BFDBFE";
-
-    const t =
-      tone === "green"
-        ? "#065F46"
-        : tone === "orange"
-        ? "#9A3412"
-        : tone === "amber"
-        ? "#92400E"
-        : colors.blue;
-
-    return (
-      <Pressable
-        onPress={onPress}
-        style={({ pressed }) => ({
-          flex: 1,
-          minWidth: isWide ? 260 : 160,
-          backgroundColor: bg,
-          borderWidth: 1,
-          borderColor: border,
-          borderRadius: 18,
-          padding: 14,
-          opacity: pressed ? 0.85 : 1,
-        })}
-      >
-        <Text style={{ fontWeight: "900", color: t, fontSize: 15 }}>{title}</Text>
-        <Text style={{ color: t, opacity: 0.85, marginTop: 6, fontWeight: "700", fontSize: 12 }}>
-          {desc}
-        </Text>
-      </Pressable>
-    );
-  };
-
-  // Bottom nav config
-  const NAV: { key: Tab; label: string; show?: () => boolean }[] = [
-    { key: "dashboard", label: "Accueil" },
-    { key: "products", label: "Produits", show: () => can("products", "read") },
-    { key: "orders", label: "Commandes", show: () => can("orders", "read") },
-    { key: "stats", label: "Stats", show: () => can("stats", "read") },
-  ];
-
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Header (modern, smaller) */}
-      <View
-        style={{
-          backgroundColor: colors.blue,
-          paddingTop: 14,
-          paddingBottom: 14,
-          paddingHorizontal: 16,
-        }}
+      <ScrollView
+        contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 36 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} />}
       >
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <View style={{ flex: 1, paddingRight: 12 }}>
-            <Text style={{ color: "white", fontSize: 18, fontWeight: "900" }}>
-              {title} Admin
-            </Text>
-            <Text style={{ color: "#BFDBFE", marginTop: 2, fontWeight: "700", fontSize: 12 }}>
-              ID: {user?.sub}
-            </Text>
+        <LinearGradient colors={["#0F172A", "#312E81"]} style={{ borderRadius: 32, padding: 22, overflow: "hidden" }}>
+          <View style={{ flexDirection: isTablet ? "row" : "column", justifyContent: "space-between", gap: 18 }}>
+            <View style={{ flex: 1 }}>
+              <Badge label={texts.dashboardTag} tone="violet" />
+              <Text style={{ color: "white", fontSize: 30, fontWeight: "900", marginTop: 8 }}>{texts.dashboardTitle}</Text>
+              <Text style={{ color: "rgba(255,255,255,0.75)", marginTop: 8, lineHeight: 22 }}>{texts.dashboardSubtitle}</Text>
+            </View>
 
-            <View style={{ marginTop: 10, flexDirection: "row", gap: 10 as any, flexWrap: "wrap" }}>
-              <Pill label={user?.isSuperAdmin ? "Super Admin" : "Admin"} tone="blue" />
-              <Pill label="E-commerce" tone="amber" />
+            <View style={{ minWidth: isTablet ? 280 : undefined, gap: 12 }}>
+              <View style={{ borderRadius: 22, backgroundColor: "rgba(255,255,255,0.08)", padding: 16 }}>
+                <Text style={{ color: "#C7D2FE", fontWeight: "700" }}>{texts.currentMonth}</Text>
+                <Text style={{ color: "white", fontWeight: "900", fontSize: 20, marginTop: 6 }}>{summary.month.label}</Text>
+                <Text style={{ color: "rgba(255,255,255,0.75)", marginTop: 6 }}>
+                  {summary.month.ordersCount} {texts.totalOrdersBadge} • {formatMoney(summary.month.revenue)}
+                </Text>
+              </View>
+              <View style={{ borderRadius: 22, backgroundColor: "rgba(255,255,255,0.08)", padding: 16 }}>
+                <Text style={{ color: "#C7D2FE", fontWeight: "700" }}>{texts.session}</Text>
+                <Text style={{ color: "white", fontWeight: "900", fontSize: 18, marginTop: 6 }}>
+                  {user?.isSuperAdmin ? texts.superAdmin : texts.admin}
+                </Text>
+                <Text style={{ color: "rgba(255,255,255,0.7)", marginTop: 6 }}>{user?.email || user?.sub}</Text>
+              </View>
             </View>
           </View>
+        </LinearGradient>
 
-          <Pressable
-            onPress={async () => {
-              await logout();
-              router.replace("/login");
-            }}
-            style={({ pressed }) => ({
-              backgroundColor: "rgba(255,255,255,0.16)",
-              paddingVertical: 10,
-              paddingHorizontal: 14,
-              borderRadius: 14,
-              opacity: pressed ? 0.85 : 1,
-            })}
-          >
-            <Text style={{ color: "white", fontWeight: "900" }}>Déconnexion</Text>
-          </Pressable>
-        </View>
-      </View>
+        {hasOrdersAccess ? (
+          <View style={{ flexDirection: isDesktop ? "row" : "column", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <StatCard title={texts.orders} value={String(summary.totals.orders)} subtitle={`${summary.month.ordersCount} ${texts.thisMonth}`} gradient={["#4F46E5", "#6366F1"]} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <StatCard title={texts.revenue} value={formatMoney(summary.totals.revenue)} subtitle={`${formatMoney(summary.today.revenue)} ${texts.today}`} gradient={["#0891B2", "#06B6D4"]} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <StatCard title={texts.products} value={String(summary.totals.products)} subtitle={`${summary.productTests.testedProducts} ${texts.topTracked}`} gradient={["#059669", "#10B981"]} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <StatCard title={texts.users} value={String(summary.totals.users || 0)} subtitle={`${summary.totals.leads} ${texts.leadsCaptured}`} gradient={["#7C3AED", "#8B5CF6"]} />
+            </View>
+          </View>
+        ) : null}
 
-      {/* Content */}
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
-        {/* DASHBOARD */}
-        {tab === "dashboard" && (
-          <>
-            <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, marginBottom: 10 }}>
-              Vue d’ensemble
-            </Text>
+        {hasOrdersAccess ? (
+          <View style={{ flexDirection: isDesktop ? "row" : "column", gap: 16 }}>
+            <Surface style={{ flex: 1.7, overflow: "hidden", minWidth: 0 }}>
+              <SectionHeader title={texts.salesTrend} subtitle={texts.salesTrendSub} badge={texts.salesBadge} />
+              <SalesTrendChart
+                series={summary.dailySeries}
+                width={isDesktop ? Math.max(480, Math.floor((width - 120) * 0.5)) : Math.max(320, width - 90)}
+              />
+            </Surface>
 
-            {/* KPI Horizontal */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
-              <KPI label="Commandes" value="—" tone="blue" />
-              <KPI label="Revenus" value="—" tone="green" />
-              <KPI label="Stock faible" value="—" tone="orange" />
-              <KPI label="Taux confirmation" value="—" tone="amber" />
-            </ScrollView>
-
-            {/* Quick actions (NOT duplicate of bottom nav) */}
-            <Card style={{ borderRadius: 22 }}>
-              <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>
-                Raccourcis
-              </Text>
-              <Text style={{ color: colors.grayText, marginTop: 4, fontWeight: "700" }}>
-                Actions rapides sans surcharger le menu
-              </Text>
-
-              <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 12 as any }}>
-                {can("products", "create") && (
-                  <ActionCard
-                    title="Ajouter un produit"
-                    desc="Créer un nouveau produit"
-                    tone="blue"
-                    onPress={() => setTab("products")}
-                  />
-                )}
-
-                {can("orders", "read") && (
-                  <ActionCard
-                    title="Voir les commandes"
-                    desc="Suivi & confirmation"
-                    tone="orange"
-                    onPress={() => setTab("orders")}
-                  />
-                )}
-
-                {user?.isSuperAdmin && (
-                  <ActionCard
-                    title="Admins"
-                    desc="Gérer les comptes admin"
-                    tone="green"
-                    onPress={() => router.push("/admins")}
-                  />
-                )}
-
-                {user?.isSuperAdmin && (
-                  <ActionCard
-                    title="Permissions"
-                    desc="CRUD modules & actions"
-                    tone="amber"
-                    onPress={() => router.push("/permissions")}
-                  />
-                )}
+            <Surface style={{ flex: 1, minWidth: 0 }}>
+              <SectionHeader title={texts.pipeline} subtitle={texts.pipelineSub} badge={`${summary.pipeline.conversionRate}%`} />
+              <View style={{ flexDirection: isTablet ? "row" : "column", gap: 12, marginBottom: 14 }}>
+                <InsightTile title={texts.leads} value={String(summary.pipeline.totalLeads)} accent={colors.primary} bg={colors.primarySoft} />
+                <InsightTile title={texts.abandons} value={String(summary.pipeline.abandonedLeads)} accent={colors.orange} bg={colors.orangeSoft} />
               </View>
-            </Card>
+              <MiniMetric label={texts.realOrders} value={String(summary.pipeline.realOrders)} color={colors.green} />
+              <MiniMetric label={texts.conversionRate} value={`${summary.pipeline.conversionRate}%`} color={colors.primary} />
+              <MiniMetric label={texts.abandonmentRate} value={`${summary.pipeline.abandonmentRate}%`} color={colors.red} />
+              <MiniMetric label={texts.deliveryRate} value={`${summary.tracking.deliveredPercent}%`} color={colors.green} />
+            </Surface>
+          </View>
+        ) : null}
 
-        
-          </>
-        )}
-
-        {/* PRODUCTS */}
-        {tab === "products" && (
-          <Card style={{ borderRadius: 22 }}>
-            <Text style={{ fontWeight: "900", color: colors.text, fontSize: 16 }}>Produits</Text>
-            <Text style={{ marginTop: 6, color: colors.grayText, fontWeight: "700" }}>
-              TODO: list + add/edit
-            </Text>
-          </Card>
-        )}
-
-        {/* ORDERS */}
-        {tab === "orders" && (
-          <Card style={{ borderRadius: 22 }}>
-            <Text style={{ fontWeight: "900", color: colors.text, fontSize: 16 }}>Commandes</Text>
-            <Text style={{ marginTop: 6, color: colors.grayText, fontWeight: "700" }}>
-              TODO: confirmation, statut, livraison…
-            </Text>
-          </Card>
-        )}
-
-        {/* STATS */}
-        {tab === "stats" && (
-          <Card style={{ borderRadius: 22 }}>
-            <Text style={{ fontWeight: "900", color: colors.text, fontSize: 16 }}>Statistiques</Text>
-            <Text style={{ marginTop: 6, color: colors.grayText, fontWeight: "700" }}>
-              TODO
-            </Text>
-          </Card>
-        )}
-      </ScrollView>
-
-      {/* Bottom Nav (single navigation only) */}
-      <View
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: "white",
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          paddingBottom: Platform.OS === "ios" ? 12 : 6,
-        }}
-      >
-        <View style={{ flexDirection: "row" }}>
-          {NAV.map((item) => {
-            if (item.show && !item.show()) return null;
-
-            const active = tab === item.key;
-            return (
+        {hasOrdersAccess ? (
+          <Surface>
+            <SectionHeader
+              title={texts.ordersChart}
+              subtitle={`${summary.month.label} • ${texts.ordersChartSub}`}
+              badge={`${summary.month.ordersCount} ${texts.totalOrdersBadge}`}
+            />
+            <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 10, marginBottom: 10 }}>
               <Pressable
-                key={item.key}
-                onPress={() => setTab(item.key)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 12,
-                  alignItems: "center",
-                  backgroundColor: active ? colors.softBlue : "white",
-                }}
+                onPress={() => setMonthOffset((value) => value - 1)}
+                style={{ backgroundColor: colors.primarySoft, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 }}
               >
-                <Text style={{ color: active ? colors.blue : colors.grayText, fontWeight: "900" }}>
-                  {item.label}
-                </Text>
+                <Text style={{ color: colors.primary, fontWeight: "800" }}>← {texts.previousMonth}</Text>
               </Pressable>
-            );
-          })}
-        </View>
-      </View>
+              {monthOffset < 0 ? (
+                <Pressable
+                  onPress={() => setMonthOffset((value) => Math.min(value + 1, 0))}
+                  style={{ backgroundColor: colors.secondarySoft, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 }}
+                >
+                  <Text style={{ color: colors.secondary, fontWeight: "800" }}>{texts.nextMonth} →</Text>
+                </Pressable>
+              ) : null}
+            </View>
+            <OrdersBarsChart series={summary.dailySeries} width={Math.max(360, width - 80)} texts={texts} />
+            <Text style={{ color: colors.muted, fontWeight: "700", textAlign: "center", fontSize: 12, marginTop: 6 }}>
+              {texts.xLegend}
+            </Text>
+          </Surface>
+        ) : null}
+
+        {isSuperAdmin ? (
+          <Surface>
+            <SectionHeader title={texts.integrations} subtitle={texts.integrationsSub} badge={`${integrationStats.activeApps} ${texts.active}`} />
+            <View style={{ flexDirection: isDesktop ? "row" : "column", gap: 16 }}>
+              <View style={{ flex: 0.95, gap: 12 }}>
+                <View style={{ borderRadius: 18, backgroundColor: integrationStats.facebookEnabled ? colors.greenSoft : colors.secondarySoft, padding: 14 }}>
+                  <Text style={{ color: colors.text, fontWeight: "800" }}>Facebook Ads</Text>
+                  <Text style={{ color: integrationStats.facebookEnabled ? colors.green : colors.secondary, fontWeight: "900", marginTop: 6 }}>
+                    {integrationStats.facebookEnabled ? texts.connected : texts.notConnected}
+                  </Text>
+                </View>
+                <View style={{ borderRadius: 18, backgroundColor: integrationStats.gaEnabled ? colors.greenSoft : colors.secondarySoft, padding: 14 }}>
+                  <Text style={{ color: colors.text, fontWeight: "800" }}>Google Analytics</Text>
+                  <Text style={{ color: integrationStats.gaEnabled ? colors.green : colors.secondary, fontWeight: "900", marginTop: 6 }}>
+                    {integrationStats.gaEnabled ? texts.connected : texts.notConnected}
+                  </Text>
+                </View>
+                <InsightTile title={texts.activeApps} value={String(integrationStats.activeApps)} accent={colors.primary} bg={colors.primarySoft} />
+              </View>
+              <View style={{ flex: 1.45 }}>
+                {summary.productTests.topProducts.map((product) => (
+                  <ProductAnalyticsCard key={product.name} title={product.name} orders={product.orders} revenue={product.revenue} locale={locale} texts={texts} />
+                ))}
+              </View>
+            </View>
+          </Surface>
+        ) : null}
+      </ScrollView>
     </View>
   );
 }
+
+
