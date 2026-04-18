@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import Svg, { Circle, Line, Polyline, Text as SvgText } from "react-native-svg";
+import Svg, { Circle, Line, Path, Polyline, Text as SvgText } from "react-native-svg";
 import { getStoredUser, getToken, logout } from "../src/services/auth.service";
 import { getDashboardSummary } from "../src/services/dashboard.service";
 import { getApplicationIntegrations } from "../src/services/application-integrations.service";
@@ -127,6 +127,7 @@ const translations = {
     languageFr: "FR",
     languageAr: "AR",
     orders: "Commandes",
+    total: "Total",
     revenue: "Revenus",
     products: "Produits",
     users: "Utilisateurs",
@@ -135,7 +136,7 @@ const translations = {
     topTracked: "tops suivis",
     leadsCaptured: "leads captures",
     salesTrend: "Tendance des ventes",
-    salesTrendSub: "Evolution du chiffre d'affaires sur les 10 derniers jours",
+    salesTrendSub: "Evolution du chiffre d'affaires sur le mois affiche",
     salesBadge: "Ventes",
     pipeline: "Vue pipeline",
     pipelineSub: "Les KPI essentiels pour decider vite",
@@ -188,6 +189,7 @@ const translations = {
     languageFr: "FR",
     languageAr: "AR",
     orders: "???????",
+    total: "??????",
     revenue: "????????",
     products: "????????",
     users: "??????????",
@@ -196,7 +198,7 @@ const translations = {
     topTracked: "?????? ??????",
     leadsCaptured: "????? ???????",
     salesTrend: "????? ????????",
-    salesTrendSub: "???? ??? ????????? ???? ??? 10 ????",
+    salesTrendSub: "???? ??? ????????? ???? ?????? ???????",
     salesBadge: "????????",
     pipeline: "???? ??????",
     pipelineSub: "???????? ???????? ?????? ?????? ?????",
@@ -443,9 +445,11 @@ function OrdersBarsChart({
 function SalesTrendChart({
   series,
   width,
+  locale,
 }: {
   series: Summary["dailySeries"];
   width: number;
+  locale: Locale;
 }) {
   const chartWidth = Math.max(420, width);
   const chartHeight = 280;
@@ -459,6 +463,7 @@ function SalesTrendChart({
   const maxValue = Math.max(...values, 1);
   const ticks = Array.from({ length: 5 }, (_, index) => Math.round((maxValue / 4) * (4 - index)));
   const stepX = series.length > 1 ? innerWidth / (series.length - 1) : innerWidth;
+  const labelEvery = series.length > 20 ? 4 : series.length > 14 ? 3 : series.length > 9 ? 2 : 1;
 
   const points = series.map((item, index) => {
     const x = leftPadding + index * stepX;
@@ -490,16 +495,108 @@ function SalesTrendChart({
           strokeLinecap="round"
         />
 
-        {points.map((point) => (
+        {points.map((point, index) => (
           <React.Fragment key={`point-${point.label}`}>
             <Circle cx={point.x} cy={point.y} r={4} fill={colors.primary} />
-            <SvgText x={point.x} y={chartHeight - 10} fontSize="11" fill={colors.muted} textAnchor="middle">
-              {point.label}
-            </SvgText>
+            {index % labelEvery === 0 || index === points.length - 1 ? (
+              <SvgText
+                x={point.x}
+                y={chartHeight - 10}
+                fontSize="11"
+                fill={colors.muted}
+                textAnchor="middle"
+              >
+                {locale === "ar" ? point.label.replace("Apr", "أبر").replace("Mar", "مار") : point.label}
+              </SvgText>
+            ) : null}
           </React.Fragment>
         ))}
       </Svg>
     </ScrollView>
+  );
+}
+
+function describeArc(
+  cx: number,
+  cy: number,
+  r: number,
+  startAngle: number,
+  endAngle: number,
+) {
+  const start = {
+    x: cx + r * Math.cos((Math.PI / 180) * startAngle),
+    y: cy + r * Math.sin((Math.PI / 180) * startAngle),
+  };
+  const end = {
+    x: cx + r * Math.cos((Math.PI / 180) * endAngle),
+    y: cy + r * Math.sin((Math.PI / 180) * endAngle),
+  };
+  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 1 ${end.x} ${end.y}`;
+}
+
+function PipelinePieChart({
+  realOrders,
+  abandonedLeads,
+  texts,
+}: {
+  realOrders: number;
+  abandonedLeads: number;
+  texts: DashboardTexts;
+}) {
+  const total = Math.max(realOrders + abandonedLeads, 1);
+  const confirmedRatio = realOrders / total;
+  const confirmedEnd = -90 + confirmedRatio * 360;
+  const size = 212;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = 72;
+  const strokeWidth = 28;
+
+  return (
+    <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 6 }}>
+      <Svg width={size} height={size}>
+        <Circle cx={cx} cy={cy} r={r} stroke={colors.border} strokeWidth={strokeWidth} fill="none" />
+        {realOrders > 0 ? (
+          <Path
+            d={describeArc(cx, cy, r, -90, confirmedEnd)}
+            stroke={colors.secondary}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            fill="none"
+          />
+        ) : null}
+        {abandonedLeads > 0 ? (
+          <Path
+            d={describeArc(cx, cy, r, confirmedEnd, 270)}
+            stroke={colors.orange}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            fill="none"
+          />
+        ) : null}
+      </Svg>
+
+      <View style={{ position: "absolute", alignItems: "center" }}>
+        <Text style={{ color: colors.muted, fontWeight: "700", fontSize: 13 }}>{texts.total || texts.orders}</Text>
+        <Text style={{ color: colors.text, fontWeight: "900", fontSize: 28, marginTop: 4 }}>{realOrders + abandonedLeads}</Text>
+      </View>
+
+      <View style={{ marginTop: 8, width: "100%", gap: 10 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <View style={{ width: 12, height: 12, borderRadius: 999, backgroundColor: colors.secondary }} />
+          <Text style={{ color: colors.muted, fontWeight: "700" }}>
+            {texts.realOrders}: {realOrders}
+          </Text>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <View style={{ width: 12, height: 12, borderRadius: 999, backgroundColor: colors.orange }} />
+          <Text style={{ color: colors.muted, fontWeight: "700" }}>
+            {texts.abandons}: {abandonedLeads}
+          </Text>
+        </View>
+      </View>
+    </View>
   );
 }
 
@@ -621,7 +718,7 @@ export default function DashboardScreen() {
                 <Text style={{ color: "#C7D2FE", fontWeight: "700" }}>{texts.currentMonth}</Text>
                 <Text style={{ color: "white", fontWeight: "900", fontSize: 20, marginTop: 6 }}>{summary.month.label}</Text>
                 <Text style={{ color: "rgba(255,255,255,0.75)", marginTop: 6 }}>
-                  {summary.month.ordersCount} {texts.totalOrdersBadge} • {formatMoney(summary.month.revenue)}
+                  {summary.month.ordersCount + summary.month.abandonedCount} {texts.totalOrdersBadge} • {formatMoney(summary.month.revenue)}
                 </Text>
               </View>
               <View style={{ borderRadius: 22, backgroundColor: "rgba(255,255,255,0.08)", padding: 16 }}>
@@ -638,7 +735,7 @@ export default function DashboardScreen() {
         {hasOrdersAccess ? (
           <View style={{ flexDirection: isDesktop ? "row" : "column", gap: 12 }}>
             <View style={{ flex: 1 }}>
-              <StatCard title={texts.orders} value={String(summary.totals.orders)} subtitle={`${summary.month.ordersCount} ${texts.thisMonth}`} gradient={["#4F46E5", "#6366F1"]} />
+              <StatCard title={texts.orders} value={String(summary.totals.orders)} subtitle={`${summary.month.ordersCount + summary.month.abandonedCount} ${texts.thisMonth}`} gradient={["#4F46E5", "#6366F1"]} />
             </View>
             <View style={{ flex: 1 }}>
               <StatCard title={texts.revenue} value={formatMoney(summary.totals.revenue)} subtitle={`${formatMoney(summary.today.revenue)} ${texts.today}`} gradient={["#0891B2", "#06B6D4"]} />
@@ -659,19 +756,31 @@ export default function DashboardScreen() {
               <SalesTrendChart
                 series={summary.dailySeries}
                 width={isDesktop ? Math.max(480, Math.floor((width - 120) * 0.5)) : Math.max(320, width - 90)}
+                locale={locale}
               />
             </Surface>
 
             <Surface style={{ flex: 1, minWidth: 0 }}>
               <SectionHeader title={texts.pipeline} subtitle={texts.pipelineSub} badge={`${summary.pipeline.conversionRate}%`} />
-              <View style={{ flexDirection: isTablet ? "row" : "column", gap: 12, marginBottom: 14 }}>
-                <InsightTile title={texts.leads} value={String(summary.pipeline.totalLeads)} accent={colors.primary} bg={colors.primarySoft} />
-                <InsightTile title={texts.abandons} value={String(summary.pipeline.abandonedLeads)} accent={colors.orange} bg={colors.orangeSoft} />
+              <View style={{ flexDirection: isTablet ? "row" : "column", gap: 16, alignItems: "center" }}>
+                <View style={{ flex: 1, width: "100%" }}>
+                  <PipelinePieChart
+                    realOrders={summary.pipeline.realOrders}
+                    abandonedLeads={summary.pipeline.abandonedLeads}
+                    texts={texts}
+                  />
+                </View>
+                <View style={{ flex: 1, width: "100%" }}>
+                  <View style={{ flexDirection: "row", gap: 12, marginBottom: 14 }}>
+                    <InsightTile title={texts.leads} value={String(summary.pipeline.totalLeads)} accent={colors.primary} bg={colors.primarySoft} />
+                    <InsightTile title={texts.abandons} value={String(summary.pipeline.abandonedLeads)} accent={colors.orange} bg={colors.orangeSoft} />
+                  </View>
+                  <MiniMetric label={texts.realOrders} value={String(summary.pipeline.realOrders)} color={colors.green} />
+                  <MiniMetric label={texts.conversionRate} value={`${summary.pipeline.conversionRate}%`} color={colors.primary} />
+                  <MiniMetric label={texts.abandonmentRate} value={`${summary.pipeline.abandonmentRate}%`} color={colors.red} />
+                  <MiniMetric label={texts.deliveryRate} value={`${summary.tracking.deliveredPercent}%`} color={colors.green} />
+                </View>
               </View>
-              <MiniMetric label={texts.realOrders} value={String(summary.pipeline.realOrders)} color={colors.green} />
-              <MiniMetric label={texts.conversionRate} value={`${summary.pipeline.conversionRate}%`} color={colors.primary} />
-              <MiniMetric label={texts.abandonmentRate} value={`${summary.pipeline.abandonmentRate}%`} color={colors.red} />
-              <MiniMetric label={texts.deliveryRate} value={`${summary.tracking.deliveredPercent}%`} color={colors.green} />
             </Surface>
           </View>
         ) : null}
@@ -681,7 +790,7 @@ export default function DashboardScreen() {
             <SectionHeader
               title={texts.ordersChart}
               subtitle={`${summary.month.label} • ${texts.ordersChartSub}`}
-              badge={`${summary.month.ordersCount} ${texts.totalOrdersBadge}`}
+              badge={`${summary.month.ordersCount + summary.month.abandonedCount} ${texts.totalOrdersBadge}`}
             />
             <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 10, marginBottom: 10 }}>
               <Pressable

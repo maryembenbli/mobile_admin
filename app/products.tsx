@@ -725,6 +725,7 @@ import {
   useWindowDimensions,
   Image,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Badge, Button, Card, Input, SectionTitle } from "../src/ui/atoms";
 import { RichTextEditor } from "../src/components/RichTextEditor";
@@ -1337,12 +1338,17 @@ return (
             </View>
           </View>
 
-          <View style={{ width: isWide ? 210 : "100%" }}>
-            <Button
-              title={showCreate ? "Fermer" : "Nouveau produit"}
-              variant="orange"
-              onPress={() => (showCreate ? setShowCreate(false) : startCreate())}
-            />
+          <View style={{ flexDirection: isWide ? "row" : "column", gap: 10, width: isWide ? undefined : "100%" }}>
+            <View style={{ width: isWide ? 190 : "100%" }}>
+              <Button title="Categories" variant="ghost" onPress={() => router.push("/categories")} />
+            </View>
+            <View style={{ width: isWide ? 210 : "100%" }}>
+              <Button
+                title={showCreate ? "Fermer" : "Nouveau produit"}
+                variant="orange"
+                onPress={() => (showCreate ? setShowCreate(false) : startCreate())}
+              />
+            </View>
           </View>
         </View>
         <View style={{ marginBottom: 12, display: "none" as any }}>
@@ -1360,7 +1366,7 @@ return (
           </View>
         ) : isWide ? (
           <Card>
-            <Text style={{ fontWeight: "900", color: colors.blue, marginBottom: 10 }}>Produits</Text>
+            <Text style={{ fontWeight: "900", color: colors.navy, marginBottom: 10, fontSize: 18 }}>Produits</Text>
 
             {list.length === 0 ? (
               <Text style={{ color: "#6B7280", fontWeight: "700" }}>Aucun produit</Text>
@@ -1402,8 +1408,18 @@ return (
                   </View>
 
                   <View style={{ flexDirection: "row", gap: 10 as any }}>
-                    <Button title="✏️" variant="ghost" onPress={() => startEdit(p)} />
-                    <Button title="🗑️" variant="orange" onPress={() => onDelete(p._id)} />
+                    <Pressable
+                      onPress={() => startEdit(p)}
+                      style={{ width: 38, height: 38, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: "white", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <Feather name="edit-3" size={16} color={colors.navySoft} />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => onDelete(p._id)}
+                      style={{ width: 38, height: 38, borderRadius: 12, borderWidth: 1, borderColor: "#FECACA", backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}
+                    >
+                      <Feather name="trash-2" size={16} color={colors.red} />
+                    </Pressable>
                   </View>
                 </View>
               ))
@@ -1420,7 +1436,7 @@ return (
                   </View>
 
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 16, fontWeight: "900", color: colors.blue }}>{p.name}</Text>
+                    <Text style={{ fontSize: 16, fontWeight: "900", color: colors.navy }}>{p.name}</Text>
 
                     <Text style={{ color: "#6B7280", marginTop: 4, fontWeight: "700" }}>
                       SKU: {p.sku || "-"} • {p.price ?? 0} dt
@@ -1436,11 +1452,17 @@ return (
                   </View>
 
                   <View style={{ flexDirection: "row", gap: 10 as any }}>
-                    <Pressable onPress={() => startEdit(p)} style={{ padding: 8 }}>
-                      <Text style={{ fontSize: 18 }}>✏️</Text>
+                    <Pressable
+                      onPress={() => startEdit(p)}
+                      style={{ width: 38, height: 38, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: "white", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <Feather name="edit-3" size={16} color={colors.navySoft} />
                     </Pressable>
-                    <Pressable onPress={() => onDelete(p._id)} style={{ padding: 8 }}>
-                      <Text style={{ fontSize: 18 }}>🗑️</Text>
+                    <Pressable
+                      onPress={() => onDelete(p._id)}
+                      style={{ width: 38, height: 38, borderRadius: 12, borderWidth: 1, borderColor: "#FECACA", backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}
+                    >
+                      <Feather name="trash-2" size={16} color={colors.red} />
                     </Pressable>
                   </View>
                 </View>

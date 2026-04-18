@@ -9,6 +9,7 @@ import {
   Platform,
   useWindowDimensions,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Badge, Button, Card, Input, SectionTitle } from "../src/ui/atoms";
 import { colors } from "../src/ui/theme";
@@ -282,15 +283,20 @@ export default function CategoriesScreen() {
             </View>
           </View>
 
-          <View style={{ width: isWide ? 210 : "100%" }}>
-            <Button
-              title={showCreate ? "Fermer" : "Nouvelle categorie"}
-              variant="orange"
-              onPress={() => (showCreate ? setShowCreate(false) : startCreate())}
-            />
+          <View style={{ flexDirection: isWide ? "row" : "column", gap: 10, width: isWide ? undefined : "100%" }}>
+            <View style={{ width: isWide ? 190 : "100%" }}>
+              <Button title="Retour produits" variant="ghost" onPress={() => router.push("/products")} />
+            </View>
+            <View style={{ width: isWide ? 210 : "100%" }}>
+              <Button
+                title={showCreate ? "Fermer" : "Nouvelle categorie"}
+                variant="orange"
+                onPress={() => (showCreate ? setShowCreate(false) : startCreate())}
+              />
+            </View>
           </View>
         </View>
-        <View style={{ marginBottom: 12, width: isWide ? 220 : "100%" }}>
+        <View style={{ marginBottom: 12, width: isWide ? 220 : "100%", display: "none" as any }}>
           <Button title="Retour produits" variant="ghost" onPress={() => router.push("/products")} />
         </View>
         {/* quick nav back to products */}

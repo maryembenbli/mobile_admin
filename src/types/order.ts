@@ -1,8 +1,9 @@
-export type OrderStatus =
+﻿export type OrderStatus =
   | "rejetee"
   | "en_attente"
   | "tentative1"
   | "confirmee"
+  | "telechargee"
   | "emballee"
   | "livree"
   | "retournee";
@@ -35,6 +36,13 @@ export type Order = {
   status: OrderStatus;
   rejectReason?: string;
   deliveryCompany?: string;
+  deliveryProvider?: string;
+  deliveryTrackingCode?: string;
+  deliveryStatus?: string;
+  deliveryStatusLabel?: string;
+  deliveryPayload?: Record<string, unknown> | null;
+  deliverySyncedAt?: string;
+  shippedAt?: string;
   privateNote?: string;
   exchange?: boolean;
   customerName: string;
@@ -55,3 +63,6 @@ export type Order = {
   createdAt?: string;
   updatedAt?: string;
 };
+
+
+

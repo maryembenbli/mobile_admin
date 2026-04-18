@@ -127,6 +127,8 @@ export default function AdminAppShell({
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1180;
+  const isTablet = width >= 760;
+  const isCompactMobile = width < 520;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const t = labels[locale];
@@ -227,13 +229,13 @@ export default function AdminAppShell({
             backgroundColor: active || childActive ? "rgba(255,255,255,0.12)" : "transparent",
             borderWidth: 1,
             borderColor: active || childActive ? "rgba(255,255,255,0.12)" : "transparent",
-            flexDirection: "row",
-            alignItems: "center",
+            flexDirection: isDesktop ? "row" : "column",
+            alignItems: isDesktop ? "center" : "stretch",
             gap: 12,
             justifyContent: "space-between",
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
+          <View style={{ flexDirection: isDesktop ? "row" : "column", alignItems: isDesktop ? "center" : "stretch", gap: isDesktop ? 12 : 8, flex: isDesktop ? 1 : undefined }}>
             <View style={{ width: 12, height: 12, borderRadius: radii.pill, backgroundColor: item.accent }} />
             <Text style={{ color: active || childActive ? colors.white : "rgba(255,255,255,0.82)", fontWeight: "800", fontSize: 15 }}>
               {item.label}
@@ -306,7 +308,7 @@ export default function AdminAppShell({
   const Sidebar = (
     <View
       style={{
-        width: isDesktop ? 288 : 300,
+        width: isDesktop ? 288 : Math.min(320, Math.max(274, width - 40)),
         backgroundColor: colors.navy,
         borderRadius: isDesktop ? 0 : radii.xl,
         paddingHorizontal: 18,
@@ -388,14 +390,14 @@ export default function AdminAppShell({
             borderColor: colors.border,
             paddingHorizontal: 18,
             paddingVertical: 16,
-            flexDirection: "row",
-            alignItems: "center",
+            flexDirection: isDesktop ? "row" : "column",
+            alignItems: isDesktop ? "center" : "stretch",
             justifyContent: "space-between",
             gap: 14,
             ...(shadows.card as object),
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
+          <View style={{ flexDirection: isDesktop ? "row" : "column", alignItems: isDesktop ? "center" : "stretch", gap: isDesktop ? 12 : 8, flex: isDesktop ? 1 : undefined }}>
             {!isDesktop ? (
               <Pressable
                 onPress={() => setMobileMenuOpen(true)}

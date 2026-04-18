@@ -1,0 +1,59 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Alert, Image, Modal, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { Button, Card, Input, SectionTitle } from "../../src/ui/atoms";
+import { colors } from "../../src/ui/theme";
+import { archiveOrder, createOrder, deleteOrder, getOrders, restoreOrder } from "../../src/services/orders.service";
+import { getProducts } from "../../src/services/products.service";
+import { bulkShipOrdersWithProvider, getEnabledDeliveryProviders } from "../../src/services/delivery-integrations.service";
+import { playNewOrderAlert } from "../../src/services/order-alert.service";
+import type { DeliveryIntegrationItem } from "../../src/types/delivery";
+import type { Order, OrderItem, OrderStatus } from "../../src/types/order";
+import type { Product } from "../../src/types/product";
+
+const API_BASE_URL = (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_BASE_URL) || "http://127.0.0.1:3000";
+const TABS = ["commandes", "abandonnee", "supprimee", "archivee"] as const;
+type OrdersTab = (typeof TABS)[number];
+const STATUS_OPTIONS: ("all" | OrderStatus)[] = ["all", "en_attente", "confirmee", "telechargee", "tentative1", "emballee", "livree", "rejetee", "retournee"];
+const EMPTY_FORM = { customerName: "", phone: "", city: "", address: "", email: "", customerNote: "", deliveryCompany: "", productId: "", quantity: "1" };
+
+function money(v: number) { return `${Number(v || 0).toFixed(2)} DT`; }
+function date(v?: string) { return v ? new Date(v).toLocaleString("fr-FR") : "-"; }
+function productTitle(item?: OrderItem | null) { if (!item) return "Produit"; return typeof item.product === "string" ? item.product : item.product?.name || item.product?.title || "Produit"; }
+function productImage(item?: OrderItem | null) { if (!item || typeof item.product === "string") return null; const raw = item.product.images?.[0] || item.product.image; return raw ? (raw.startsWith("http") ? raw : `${API_BASE_URL}${raw}`) : null; }
+function statusTheme(status: OrderStatus) {
+  switch (status) {
+    case "confirmee": return { bg: "#DCFCE7", text: "#166534", border: "#BBF7D0" };
+    case "telechargee": return { bg: "#DBEAFE", text: "#1D4ED8", border: "#BFDBFE" };
+    case "emballee": return { bg: "#F3E8FF", text: "#7C3AED", border: "#DDD6FE" };
+    case "livree": return { bg: "#ECFDF3", text: "#16A34A", border: "#BBF7D0" };
+    case "tentative1": return { bg: "#FFF7ED", text: "#C2410C", border: "#FED7AA" };
+    case "rejetee":
+    case "retournee": return { bg: "#FEF2F2", text: "#DC2626", border: "#FECACA" };
+    default: return { bg: "#FEF3C7", text: "#92400E", border: "#FDE68A" };
+  }
+}
+function StatusBadge({ status }: { status: OrderStatus }) {
+  const t = statusTheme(status);
+  return <View style={{ alignSelf: "flex-start", borderRadius: 999, borderWidth: 1, borderColor: t.border, backgroundColor: t.bg, paddingHorizontal: 12, paddingVertical: 7 }}><Text style={{ color: t.text, fontWeight: "900", fontSize: 12 }}>{status}</Text></View>;
+}
+function IconBtn({ icon, onPress, color = colors.text }: { icon: keyof typeof Feather.glyphMap; onPress: () => void; color?: string }) {
+  return <Pressable onPress={onPress} style={{ width: 38, height: 38, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: "white", alignItems: "center", justifyContent: "center" }}><Feather name={icon} size={16} color={color} /></Pressable>;
+}
+function Picker({ value, options, onChange, placeholder }: { value: string; options: { key: string; label: string }[]; onChange: (v: string) => void; placeholder: string; }) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.key === value);
+  return <View style={{ minWidth: 190 }}>
+    <Pressable onPress={() => setOpen(true)} style={{ minHeight: 52, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: "white", paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+      <Text style={{ color: selected ? colors.text : "#94A3B8", fontWeight: "700", flex: 1 }}>{selected?.label || placeholder}</Text><Feather name="chevron-down" size={16} color="#64748B" />
+    </Pressable>
+    <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+      <Pressable onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: "rgba(15,23,42,0.32)", justifyContent: "center", padding: 20 }}>
+        <Pressable onPress={(e) => e.stopPropagation()} style={{ alignSelf: "center", width: "100%", maxWidth: 420, borderRadius: 18, overflow: "hidden", backgroundColor: "white", borderWidth: 1, borderColor: colors.border }}>
+          <ScrollView style={{ maxHeight: 320 }}><View style={{ padding: 10, gap: 8 }}>{options.map((option) => <Pressable key={option.key} onPress={() => { onChange(option.key); setOpen(false); }} style={{ borderRadius: 12, borderWidth: 1, borderColor: option.key === value ? colors.cobalt : colors.border, backgroundColor: option.key === value ? colors.cobaltSoft : "white", padding: 12 }}><Text style={{ color: option.key === value ? colors.cobalt : colors.textSoft, fontWeight: "700" }}>{option.label}</Text></Pressable>)}</View></ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  </View>;
+}

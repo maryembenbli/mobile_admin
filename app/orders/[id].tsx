@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -9,7 +9,11 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Button, Card, Input } from "../../src/ui/atoms";
-import { getEnabledDeliveryProviders } from "../../src/services/delivery-integrations.service";
+import {
+  getEnabledDeliveryProviders,
+  refreshOrderShipment,
+  shipOrderWithProvider,
+} from "../../src/services/delivery-integrations.service";
 import { getOrder, updateOrder } from "../../src/services/orders.service";
 import type { Order, OrderItem, OrderStatus } from "../../src/types/order";
 import type { DeliveryProvider } from "../../src/types/delivery";
@@ -19,6 +23,7 @@ const STATUS_FLOW: OrderStatus[] = [
   "en_attente",
   "tentative1",
   "confirmee",
+  "telechargee",
   "emballee",
   "livree",
   "rejetee",
@@ -54,6 +59,8 @@ function getStatusTheme(status: OrderStatus) {
       return { bg: "#DCFCE7", text: "#166534", border: "#BBF7D0" };
     case "livree":
       return { bg: "#DBEAFE", text: "#1D4ED8", border: "#BFDBFE" };
+    case "telechargee":
+      return { bg: "#DBEAFE", text: "#1D4ED8", border: "#BFDBFE" };
     case "emballee":
       return { bg: "#EDE9FE", text: "#6D28D9", border: "#DDD6FE" };
     case "tentative1":
@@ -74,8 +81,9 @@ export default function OrderDetailsScreen() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [shippingActionLoading, setShippingActionLoading] = useState(false);
   const [status, setStatus] = useState<OrderStatus>("en_attente");
-  const [rejectReason, setRejectReason] = useState<string>("");
+  const [rejectReason, setRejectReason] = useState("");
   const [privateNote, setPrivateNote] = useState("");
   const [exchange, setExchange] = useState(false);
   const [deliveryCompany, setDeliveryCompany] = useState("");
@@ -86,6 +94,20 @@ export default function OrderDetailsScreen() {
   const [address, setAddress] = useState("");
   const [email, setEmail] = useState("");
   const [customerNote, setCustomerNote] = useState("");
+  const historyEntries = [...(order?.history || [])].sort((a, b) => {
+    const left = a?.date ? new Date(a.date).getTime() : 0;
+    const right = b?.date ? new Date(b.date).getTime() : 0;
+    return right - left;
+  });
+
+  const getMissingShippingFields = () => {
+    const missing: string[] = [];
+    if (!customerName.trim()) missing.push("nom");
+    if (!phone.trim()) missing.push("telephone");
+    if (!city.trim()) missing.push("ville");
+    if (!address.trim()) missing.push("adresse");
+    return missing;
+  };
 
   const loadOrder = async () => {
     if (!orderId) {
@@ -133,6 +155,11 @@ export default function OrderDetailsScreen() {
       Alert.alert("Champ requis", "Le numero de telephone est obligatoire.");
       return;
     }
+    const missing = getMissingShippingFields();
+    if (deliveryCompany && missing.length) {
+      Alert.alert("Champs requis", `Impossible d enregistrer avec une societe de livraison tant que ces champs manquent: ${missing.join(", ")}.`);
+      return;
+    }
 
     try {
       setSaving(true);
@@ -160,9 +187,77 @@ export default function OrderDetailsScreen() {
     }
   };
 
+  const shipOrder = async () => {
+    if (!order) return;
+    if (!deliveryCompany.trim()) {
+      Alert.alert("Transporteur requis", "Choisis d abord une societe de livraison.");
+      return;
+    }
+    const missing = getMissingShippingFields();
+    if (missing.length) {
+      Alert.alert("Champs requis", `Impossible d envoyer au transporteur tant que ces champs manquent: ${missing.join(", ")}.`);
+      return;
+    }
+    try {
+      setShippingActionLoading(true);
+      await updateOrder(order._id, {
+        status,
+        rejectReason: status === "rejetee" ? rejectReason : undefined,
+        privateNote,
+        exchange,
+        deliveryCompany,
+        customerName: customerName.trim() || "Client",
+        phone: phone.trim(),
+        city: city.trim(),
+        address: address.trim(),
+        email: email.trim() || undefined,
+        customerNote: customerNote.trim() || undefined,
+      });
+      const updated = await shipOrderWithProvider(order._id);
+      setOrder(updated);
+      setDeliveryCompany(updated.deliveryCompany || "");
+      Alert.alert("Succes", "Commande envoyee au transporteur.");
+    } catch (error: any) {
+      console.error(error);
+      Alert.alert(
+        "Erreur",
+        error?.response?.data?.message ||
+          "Impossible d envoyer la commande au transporteur.",
+      );
+    } finally {
+      setShippingActionLoading(false);
+    }
+  };
+
+  const refreshTracking = async () => {
+    if (!order) return;
+    try {
+      setShippingActionLoading(true);
+      const updated = await refreshOrderShipment(order._id);
+      setOrder(updated);
+      Alert.alert("Succes", "Suivi transport synchronise.");
+    } catch (error: any) {
+      console.error(error);
+      Alert.alert(
+        "Erreur",
+        error?.response?.data?.message ||
+          "Impossible de synchroniser le suivi transport.",
+      );
+    } finally {
+      setShippingActionLoading(false);
+    }
+  };
+
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.bg }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: colors.bg,
+        }}
+      >
         <ActivityIndicator />
       </View>
     );
@@ -170,11 +265,22 @@ export default function OrderDetailsScreen() {
 
   if (!order) {
     return (
-      <View style={{ flex: 1, padding: 16, backgroundColor: colors.bg, justifyContent: "center" }}>
+      <View
+        style={{
+          flex: 1,
+          padding: 16,
+          backgroundColor: colors.bg,
+          justifyContent: "center",
+        }}
+      >
         <Card>
           <Text style={{ color: colors.grayText }}>Commande introuvable.</Text>
           <View style={{ marginTop: 14 }}>
-            <Button title="Retour liste" variant="ghost" onPress={() => router.replace("/orders" as never)} />
+            <Button
+              title="Retour liste"
+              variant="ghost"
+              onPress={() => router.replace("/orders" as never)}
+            />
           </View>
         </Card>
       </View>
@@ -184,17 +290,42 @@ export default function OrderDetailsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 32 }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
           <Text style={{ color: "#0F172A", fontSize: 26, fontWeight: "900" }}>
-            Modifier la commande n�{order._id.slice(-4)}
+            Modifier la commande n°{order._id.slice(-4)}
           </Text>
-          <Button title={saving ? "Enregistrement..." : "Enregistrer"} onPress={saveOrder} disabled={saving} />
+          <Button
+            title={saving ? "Enregistrement..." : "Enregistrer"}
+            onPress={saveOrder}
+            disabled={saving}
+          />
         </View>
 
         <Card>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: "#0F172A" }}>Details de la commande</Text>
-            <Pressable onPress={() => setExchange((current) => !current)} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 14,
+            }}
+          >
+            <Text
+              style={{ fontSize: 18, fontWeight: "900", color: "#0F172A" }}
+            >
+              Details de la commande
+            </Text>
+            <Pressable
+              onPress={() => setExchange((current) => !current)}
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
               <View
                 style={{
                   width: 18,
@@ -209,7 +340,11 @@ export default function OrderDetailsScreen() {
             </Pressable>
           </View>
 
-          <Text style={{ fontWeight: "800", color: "#0F172A", marginBottom: 10 }}>Statut</Text>
+          <Text
+            style={{ fontWeight: "800", color: "#0F172A", marginBottom: 10 }}
+          >
+            Statut
+          </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             {STATUS_FLOW.map((item) => {
               const active = status === item;
@@ -228,7 +363,14 @@ export default function OrderDetailsScreen() {
                     backgroundColor: active ? theme.bg : "white",
                   }}
                 >
-                  <Text style={{ color: active ? theme.text : "#475569", fontWeight: "800" }}>{item}</Text>
+                  <Text
+                    style={{
+                      color: active ? theme.text : "#475569",
+                      fontWeight: "800",
+                    }}
+                  >
+                    {item}
+                  </Text>
                 </Pressable>
               );
             })}
@@ -236,7 +378,11 @@ export default function OrderDetailsScreen() {
 
           {status === "rejetee" ? (
             <View style={{ marginTop: 16 }}>
-              <Text style={{ fontWeight: "800", color: "#0F172A", marginBottom: 10 }}>Raison du rejet</Text>
+              <Text
+                style={{ fontWeight: "800", color: "#0F172A", marginBottom: 10 }}
+              >
+                Raison du rejet
+              </Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
                 {REJECT_REASONS.map((item) => (
                   <Pressable
@@ -247,11 +393,20 @@ export default function OrderDetailsScreen() {
                       paddingVertical: 10,
                       borderRadius: 14,
                       borderWidth: 1,
-                      borderColor: rejectReason === item ? "#FCA5A5" : colors.border,
-                      backgroundColor: rejectReason === item ? "#FEE2E2" : "white",
+                      borderColor:
+                        rejectReason === item ? "#FCA5A5" : colors.border,
+                      backgroundColor:
+                        rejectReason === item ? "#FEE2E2" : "white",
                     }}
                   >
-                    <Text style={{ color: rejectReason === item ? "#B91C1C" : "#475569", fontWeight: "800" }}>{item}</Text>
+                    <Text
+                      style={{
+                        color: rejectReason === item ? "#B91C1C" : "#475569",
+                        fontWeight: "800",
+                      }}
+                    >
+                      {item}
+                    </Text>
                   </Pressable>
                 ))}
               </View>
@@ -259,7 +414,11 @@ export default function OrderDetailsScreen() {
           ) : null}
 
           <View style={{ marginTop: 16 }}>
-            <Text style={{ fontWeight: "800", color: "#0F172A", marginBottom: 10 }}>Societe de livraison</Text>
+            <Text
+              style={{ fontWeight: "800", color: "#0F172A", marginBottom: 10 }}
+            >
+              Societe de livraison
+            </Text>
             {enabledProviders.length === 0 ? (
               <View style={{ gap: 10 }}>
                 <Text style={{ color: colors.grayText }}>
@@ -279,7 +438,14 @@ export default function OrderDetailsScreen() {
                     return (
                       <Pressable
                         key={provider.id}
-                        onPress={() => setDeliveryCompany(provider.name)}
+                        onPress={() => {
+                          const missing = getMissingShippingFields();
+                          if (missing.length) {
+                            Alert.alert("Champs requis", `Impossible de choisir une societe de livraison tant que ces champs manquent: ${missing.join(", ")}.`);
+                            return;
+                          }
+                          setDeliveryCompany(provider.name);
+                        }}
                         style={{
                           paddingHorizontal: 14,
                           paddingVertical: 10,
@@ -289,7 +455,12 @@ export default function OrderDetailsScreen() {
                           backgroundColor: active ? "#F5F3FF" : "white",
                         }}
                       >
-                        <Text style={{ color: active ? "#6D28D9" : "#475569", fontWeight: "800" }}>
+                        <Text
+                          style={{
+                            color: active ? "#6D28D9" : "#475569",
+                            fontWeight: "800",
+                          }}
+                        >
                           {provider.name}
                         </Text>
                       </Pressable>
@@ -300,8 +471,65 @@ export default function OrderDetailsScreen() {
             )}
           </View>
 
+          {deliveryCompany ? (
+            <View style={{ marginTop: 16, gap: 12 }}>
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 16,
+                  padding: 14,
+                  backgroundColor: "#F8FAFC",
+                }}
+              >
+                <Text style={{ color: "#0F172A", fontWeight: "900" }}>
+                  Suivi transport
+                </Text>
+                <Text style={{ color: colors.grayText, marginTop: 8 }}>
+                  Transporteur: {order.deliveryCompany || deliveryCompany}
+                </Text>
+                <Text style={{ color: colors.grayText, marginTop: 6 }}>
+                  Code barre: {order.deliveryTrackingCode || "-"}
+                </Text>
+                <Text style={{ color: colors.grayText, marginTop: 6 }}>
+                  Statut transport: {order.deliveryStatusLabel || order.deliveryStatus || "-"}
+                </Text>
+                <Text style={{ color: colors.grayText, marginTop: 6 }}>
+                  Derniere synchro: {formatDate(order.deliverySyncedAt)}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 12, flexWrap: "wrap" }}>
+                <Button
+                  title={
+                    shippingActionLoading
+                      ? "Envoi..."
+                      : "Envoyer au transporteur"
+                  }
+                  variant="orange"
+                  onPress={shipOrder}
+                  disabled={shippingActionLoading}
+                />
+                {order.deliveryTrackingCode ? (
+                  <Button
+                    title={
+                      shippingActionLoading ? "Sync..." : "Synchroniser le suivi"
+                    }
+                    variant="ghost"
+                    onPress={refreshTracking}
+                    disabled={shippingActionLoading}
+                  />
+                ) : null}
+              </View>
+            </View>
+          ) : null}
+
           <View style={{ marginTop: 16 }}>
-            <Text style={{ fontWeight: "800", color: "#0F172A", marginBottom: 10 }}>Ajouter une note privee...</Text>
+            <Text
+              style={{ fontWeight: "800", color: "#0F172A", marginBottom: 10 }}
+            >
+              Ajouter une note privee...
+            </Text>
             <Input
               value={privateNote}
               onChangeText={setPrivateNote}
@@ -313,60 +541,171 @@ export default function OrderDetailsScreen() {
         </Card>
 
         <Card>
-          <Text style={{ fontSize: 18, fontWeight: "900", color: "#0F172A", marginBottom: 14 }}>Details du client</Text>
+          <Text
+            style={{ fontSize: 18, fontWeight: "900", color: "#0F172A", marginBottom: 14 }}
+          >
+            Details du client
+          </Text>
           <View style={{ gap: 12 }}>
             <View>
-              <Text style={{ fontWeight: "800", color: "#0F172A", marginBottom: 8 }}>Nom</Text>
-              <Input value={customerName} onChangeText={setCustomerName} placeholder="Nom du client" />
+              <Text
+                style={{ fontWeight: "800", color: "#0F172A", marginBottom: 8 }}
+              >
+                Nom
+              </Text>
+              <Input
+                value={customerName}
+                onChangeText={setCustomerName}
+                placeholder="Nom du client"
+              />
             </View>
             <View>
-              <Text style={{ fontWeight: "800", color: "#0F172A", marginBottom: 8 }}>Telephone</Text>
-              <Input value={phone} onChangeText={setPhone} placeholder="Numero de telephone" />
+              <Text
+                style={{ fontWeight: "800", color: "#0F172A", marginBottom: 8 }}
+              >
+                Telephone
+              </Text>
+              <Input
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="Numero de telephone"
+              />
             </View>
             <View>
-              <Text style={{ fontWeight: "800", color: "#0F172A", marginBottom: 8 }}>Ville</Text>
+              <Text
+                style={{ fontWeight: "800", color: "#0F172A", marginBottom: 8 }}
+              >
+                Ville
+              </Text>
               <Input value={city} onChangeText={setCity} placeholder="Ville" />
             </View>
             <View>
-              <Text style={{ fontWeight: "800", color: "#0F172A", marginBottom: 8 }}>Adresse</Text>
-              <Input value={address} onChangeText={setAddress} placeholder="Adresse" multiline style={{ minHeight: 80, textAlignVertical: "top" }} />
+              <Text
+                style={{ fontWeight: "800", color: "#0F172A", marginBottom: 8 }}
+              >
+                Adresse
+              </Text>
+              <Input
+                value={address}
+                onChangeText={setAddress}
+                placeholder="Adresse"
+                multiline
+                style={{ minHeight: 80, textAlignVertical: "top" }}
+              />
             </View>
             <View>
-              <Text style={{ fontWeight: "800", color: "#0F172A", marginBottom: 8 }}>Email</Text>
-              <Input value={email} onChangeText={setEmail} placeholder="Email" autoCapitalize="none" />
+              <Text
+                style={{ fontWeight: "800", color: "#0F172A", marginBottom: 8 }}
+              >
+                Email
+              </Text>
+              <Input
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Email"
+                autoCapitalize="none"
+              />
             </View>
             <View>
-              <Text style={{ fontWeight: "800", color: "#0F172A", marginBottom: 8 }}>Note client</Text>
-              <Input value={customerNote} onChangeText={setCustomerNote} placeholder="Note client" multiline style={{ minHeight: 90, textAlignVertical: "top" }} />
+              <Text
+                style={{ fontWeight: "800", color: "#0F172A", marginBottom: 8 }}
+              >
+                Note client
+              </Text>
+              <Input
+                value={customerNote}
+                onChangeText={setCustomerNote}
+                placeholder="Note client"
+                multiline
+                style={{ minHeight: 90, textAlignVertical: "top" }}
+              />
             </View>
           </View>
         </Card>
 
         <Card>
-          <Text style={{ fontSize: 18, fontWeight: "900", color: "#0F172A", marginBottom: 14 }}>Produits</Text>
+          <Text
+            style={{ fontSize: 18, fontWeight: "900", color: "#0F172A", marginBottom: 14 }}
+          >
+            Produits
+          </Text>
           <View style={{ gap: 12 }}>
             {order.items.map((item, index) => (
-              <View key={`${getProductTitle(item)}-${index}`} style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 12 }}>
-                <Text style={{ color: "#0F172A", fontWeight: "900" }}>{getProductTitle(item)}</Text>
-                <Text style={{ color: colors.grayText, marginTop: 4 }}>Quantite: {item.quantity}</Text>
-                <Text style={{ color: colors.grayText, marginTop: 4 }}>Prix: {formatMoney(item.price)}</Text>
+              <View
+                key={`${getProductTitle(item)}-${index}`}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 16,
+                  padding: 12,
+                }}
+              >
+                <Text style={{ color: "#0F172A", fontWeight: "900" }}>
+                  {getProductTitle(item)}
+                </Text>
+                <Text style={{ color: colors.grayText, marginTop: 4 }}>
+                  Quantite: {item.quantity}
+                </Text>
+                <Text style={{ color: colors.grayText, marginTop: 4 }}>
+                  Prix: {formatMoney(item.price)}
+                </Text>
               </View>
             ))}
-            <Text style={{ color: colors.blue, fontWeight: "900", fontSize: 18 }}>Total: {formatMoney(order.total)}</Text>
+            <Text style={{ color: colors.blue, fontWeight: "900", fontSize: 18 }}>
+              Total: {formatMoney(order.total)}
+            </Text>
           </View>
         </Card>
 
         <Card>
-          <Text style={{ fontSize: 18, fontWeight: "900", color: "#0F172A", marginBottom: 14 }}>Historique</Text>
+          <Text
+            style={{ fontSize: 18, fontWeight: "900", color: "#0F172A", marginBottom: 14 }}
+          >
+            Historique
+          </Text>
           <View style={{ gap: 12 }}>
-            {(order.history || []).map((entry, index) => (
-              <View key={`${entry.status}-${entry.date}-${index}`} style={{ borderBottomWidth: index === (order.history || []).length - 1 ? 0 : 1, borderBottomColor: colors.border, paddingBottom: 12 }}>
-                <Text style={{ color: "#0F172A", fontWeight: "900" }}>{entry.status}</Text>
-                <Text style={{ color: colors.grayText, marginTop: 4 }}>{entry.changedBy}</Text>
-                {entry.note ? <Text style={{ color: colors.grayText, marginTop: 4 }}>{entry.note}</Text> : null}
-                <Text style={{ color: colors.grayText, marginTop: 4 }}>{formatDate(entry.date)}</Text>
+            {historyEntries.length ? (
+            historyEntries.map((entry, index) => (
+              <View
+                key={`${entry.status}-${entry.date}-${index}`}
+                style={{
+                  borderBottomWidth:
+                    index === historyEntries.length - 1 ? 0 : 1,
+                  borderBottomColor: colors.border,
+                  paddingBottom: 12,
+                }}
+              >
+                <Text style={{ color: "#0F172A", fontWeight: "900" }}>
+                  {entry.status}
+                </Text>
+                <Text style={{ color: colors.grayText, marginTop: 4 }}>
+                  {entry.changedBy}
+                </Text>
+                {entry.note ? (
+                  <Text style={{ color: colors.grayText, marginTop: 4 }}>
+                    {entry.note}
+                  </Text>
+                ) : null}
+                <Text style={{ color: colors.grayText, marginTop: 4 }}>
+                  {formatDate(entry.date)}
+                </Text>
               </View>
-            ))}
+            ))
+          ) : (
+            <View
+              style={{
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.bgMuted,
+                padding: 14,
+              }}
+            >
+              <Text style={{ color: colors.grayText }}>
+                Aucun historique disponible pour cette commande pour le moment.
+              </Text>
+            </View>
+          )}
           </View>
         </Card>
       </ScrollView>
