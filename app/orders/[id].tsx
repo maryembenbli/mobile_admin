@@ -6,24 +6,24 @@ import {
   ScrollView,
   Text,
   View,
+  Modal,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Button, Card, Input } from "../../src/ui/atoms";
 import {
   getEnabledDeliveryProviders,
-  refreshOrderShipment,
   shipOrderWithProvider,
 } from "../../src/services/delivery-integrations.service";
 import { getOrder, updateOrder } from "../../src/services/orders.service";
 import type { Order, OrderItem, OrderStatus } from "../../src/types/order";
 import type { DeliveryProvider } from "../../src/types/delivery";
 import { colors } from "../../src/ui/theme";
+import { TUNISIA_CITY_OPTIONS } from "../../src/constants/tunisia-cities";
 
-const STATUS_FLOW: OrderStatus[] = [
+const BASE_STATUS_FLOW: OrderStatus[] = [
   "en_attente",
   "tentative1",
   "confirmee",
-  "telechargee",
   "emballee",
   "livree",
   "rejetee",
@@ -51,6 +51,95 @@ function formatMoney(value: number) {
 function getProductTitle(item: OrderItem) {
   if (typeof item.product === "string") return item.product;
   return item.product?.name || item.product?.title || item.product?._id || "Produit";
+}
+
+function Picker({
+  value,
+  options,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  options: { key: string; label: string }[];
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((item) => item.key === value);
+
+  return (
+    <View style={{ minWidth: 190 }}>
+      <Pressable
+        onPress={() => setOpen(true)}
+        style={{
+          minHeight: 52,
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: colors.border,
+          backgroundColor: colors.white,
+          paddingHorizontal: 14,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Text style={{ color: selected ? colors.text : "#94A3B8", fontWeight: "700", flex: 1 }}>
+          {selected?.label || placeholder}
+        </Text>
+        <Text style={{ color: "#64748B", fontWeight: "900" }}>?</Text>
+      </Pressable>
+
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable
+          onPress={() => setOpen(false)}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(15,23,42,0.32)",
+            justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <Pressable
+            onPress={(event) => event.stopPropagation()}
+            style={{
+              alignSelf: "center",
+              width: "100%",
+              maxWidth: 420,
+              borderRadius: 18,
+              overflow: "hidden",
+              backgroundColor: colors.white,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <ScrollView style={{ maxHeight: 320 }}>
+              <View style={{ padding: 10, gap: 8 }}>
+                {options.map((option) => (
+                  <Pressable
+                    key={option.key}
+                    onPress={() => {
+                      onChange(option.key);
+                      setOpen(false);
+                    }}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 12,
+                      borderRadius: 12,
+                      backgroundColor: option.key === value ? "#EEF2FF" : colors.white,
+                      borderWidth: 1,
+                      borderColor: option.key === value ? "#C7D2FE" : colors.border,
+                    }}
+                  >
+                    <Text style={{ color: colors.text, fontWeight: "700" }}>{option.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
 }
 
 function getStatusTheme(status: OrderStatus) {
@@ -81,7 +170,6 @@ export default function OrderDetailsScreen() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [shippingActionLoading, setShippingActionLoading] = useState(false);
   const [status, setStatus] = useState<OrderStatus>("en_attente");
   const [rejectReason, setRejectReason] = useState("");
   const [privateNote, setPrivateNote] = useState("");
@@ -99,6 +187,11 @@ export default function OrderDetailsScreen() {
     const right = b?.date ? new Date(b.date).getTime() : 0;
     return right - left;
   });
+
+  const statusFlow: OrderStatus[] =
+    order?.isAbandoned || status === "abandonnee"
+      ? (["abandonnee", ...BASE_STATUS_FLOW] as OrderStatus[])
+      : BASE_STATUS_FLOW;
 
   const getMissingShippingFields = () => {
     const missing: string[] = [];
@@ -155,11 +248,29 @@ export default function OrderDetailsScreen() {
       Alert.alert("Champ requis", "Le numero de telephone est obligatoire.");
       return;
     }
+
     const missing = getMissingShippingFields();
     if (deliveryCompany && missing.length) {
-      Alert.alert("Champs requis", `Impossible d enregistrer avec une societe de livraison tant que ces champs manquent: ${missing.join(", ")}.`);
+      Alert.alert(
+        "Champs requis",
+        `Impossible d enregistrer avec une societe de livraison tant que ces champs manquent: ${missing.join(", ")}.`,
+      );
       return;
     }
+
+    const previousSnapshot = {
+      status: order.status,
+      rejectReason: order.rejectReason,
+      privateNote: order.privateNote || "",
+      exchange: Boolean(order.exchange),
+      deliveryCompany: order.deliveryCompany || "",
+      customerName: order.customerName || "Client",
+      phone: order.phone || "",
+      city: order.city || undefined,
+      address: order.address || undefined,
+      email: order.email || undefined,
+      customerNote: order.customerNote || undefined,
+    };
 
     try {
       setSaving(true);
@@ -176,75 +287,35 @@ export default function OrderDetailsScreen() {
         email: email.trim() || undefined,
         customerNote: customerNote.trim() || undefined,
       });
-      setOrder(updated);
-      Alert.alert("Succes", "Commande mise a jour.");
+
+      let finalOrder = updated;
+
+      if (status === "confirmee" && deliveryCompany.trim()) {
+        try {
+          finalOrder = await shipOrderWithProvider(order._id);
+        } catch (error: any) {
+          await updateOrder(order._id, previousSnapshot);
+          throw error;
+        }
+      }
+
+      setOrder(finalOrder);
+      Alert.alert(
+        "Succes",
+        finalOrder.status === "telechargee"
+          ? "Commande enregistree et envoyee au transporteur."
+          : "Commande mise a jour.",
+      );
       router.replace("/orders" as never);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      Alert.alert("Erreur", "Impossible d enregistrer les changements.");
+      Alert.alert(
+        "Erreur",
+        error?.response?.data?.message ||
+          "Impossible d enregistrer les changements.",
+      );
     } finally {
       setSaving(false);
-    }
-  };
-
-  const shipOrder = async () => {
-    if (!order) return;
-    if (!deliveryCompany.trim()) {
-      Alert.alert("Transporteur requis", "Choisis d abord une societe de livraison.");
-      return;
-    }
-    const missing = getMissingShippingFields();
-    if (missing.length) {
-      Alert.alert("Champs requis", `Impossible d envoyer au transporteur tant que ces champs manquent: ${missing.join(", ")}.`);
-      return;
-    }
-    try {
-      setShippingActionLoading(true);
-      await updateOrder(order._id, {
-        status,
-        rejectReason: status === "rejetee" ? rejectReason : undefined,
-        privateNote,
-        exchange,
-        deliveryCompany,
-        customerName: customerName.trim() || "Client",
-        phone: phone.trim(),
-        city: city.trim(),
-        address: address.trim(),
-        email: email.trim() || undefined,
-        customerNote: customerNote.trim() || undefined,
-      });
-      const updated = await shipOrderWithProvider(order._id);
-      setOrder(updated);
-      setDeliveryCompany(updated.deliveryCompany || "");
-      Alert.alert("Succes", "Commande envoyee au transporteur.");
-    } catch (error: any) {
-      console.error(error);
-      Alert.alert(
-        "Erreur",
-        error?.response?.data?.message ||
-          "Impossible d envoyer la commande au transporteur.",
-      );
-    } finally {
-      setShippingActionLoading(false);
-    }
-  };
-
-  const refreshTracking = async () => {
-    if (!order) return;
-    try {
-      setShippingActionLoading(true);
-      const updated = await refreshOrderShipment(order._id);
-      setOrder(updated);
-      Alert.alert("Succes", "Suivi transport synchronise.");
-    } catch (error: any) {
-      console.error(error);
-      Alert.alert(
-        "Erreur",
-        error?.response?.data?.message ||
-          "Impossible de synchroniser le suivi transport.",
-      );
-    } finally {
-      setShippingActionLoading(false);
     }
   };
 
@@ -346,7 +417,7 @@ export default function OrderDetailsScreen() {
             Statut
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-            {STATUS_FLOW.map((item) => {
+            {statusFlow.map((item) => {
               const active = status === item;
               const theme = getStatusTheme(item);
 
@@ -419,6 +490,9 @@ export default function OrderDetailsScreen() {
             >
               Societe de livraison
             </Text>
+            <Text style={{ color: colors.grayText, marginBottom: 10 }}>
+              Enregistrer une commande confirmee avec une societe integree l envoie automatiquement au transporteur.
+            </Text>
             {enabledProviders.length === 0 ? (
               <View style={{ gap: 10 }}>
                 <Text style={{ color: colors.grayText }}>
@@ -470,59 +544,6 @@ export default function OrderDetailsScreen() {
               </ScrollView>
             )}
           </View>
-
-          {deliveryCompany ? (
-            <View style={{ marginTop: 16, gap: 12 }}>
-              <View
-                style={{
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  borderRadius: 16,
-                  padding: 14,
-                  backgroundColor: "#F8FAFC",
-                }}
-              >
-                <Text style={{ color: "#0F172A", fontWeight: "900" }}>
-                  Suivi transport
-                </Text>
-                <Text style={{ color: colors.grayText, marginTop: 8 }}>
-                  Transporteur: {order.deliveryCompany || deliveryCompany}
-                </Text>
-                <Text style={{ color: colors.grayText, marginTop: 6 }}>
-                  Code barre: {order.deliveryTrackingCode || "-"}
-                </Text>
-                <Text style={{ color: colors.grayText, marginTop: 6 }}>
-                  Statut transport: {order.deliveryStatusLabel || order.deliveryStatus || "-"}
-                </Text>
-                <Text style={{ color: colors.grayText, marginTop: 6 }}>
-                  Derniere synchro: {formatDate(order.deliverySyncedAt)}
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: "row", gap: 12, flexWrap: "wrap" }}>
-                <Button
-                  title={
-                    shippingActionLoading
-                      ? "Envoi..."
-                      : "Envoyer au transporteur"
-                  }
-                  variant="orange"
-                  onPress={shipOrder}
-                  disabled={shippingActionLoading}
-                />
-                {order.deliveryTrackingCode ? (
-                  <Button
-                    title={
-                      shippingActionLoading ? "Sync..." : "Synchroniser le suivi"
-                    }
-                    variant="ghost"
-                    onPress={refreshTracking}
-                    disabled={shippingActionLoading}
-                  />
-                ) : null}
-              </View>
-            </View>
-          ) : null}
 
           <View style={{ marginTop: 16 }}>
             <Text
@@ -577,7 +598,12 @@ export default function OrderDetailsScreen() {
               >
                 Ville
               </Text>
-              <Input value={city} onChangeText={setCity} placeholder="Ville" />
+              <Picker
+                value={city}
+                options={TUNISIA_CITY_OPTIONS}
+                onChange={setCity}
+                placeholder="Choisir une ville"
+              />
             </View>
             <View>
               <Text

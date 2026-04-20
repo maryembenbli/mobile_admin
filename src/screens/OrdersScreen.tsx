@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,6 +15,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Button, Card, Input, SectionTitle } from "../ui/atoms";
 import { colors } from "../ui/theme";
+import { TUNISIA_CITY_OPTIONS } from "../constants/tunisia-cities";
 import {
   archiveOrder,
   createOrder,
@@ -27,6 +28,7 @@ import {
   bulkShipOrdersWithProvider,
   getEnabledDeliveryProviders,
 } from "../services/delivery-integrations.service";
+import { playNewOrderAlert } from "../services/order-alert.service";
 import { useAdminShell } from "../context/AdminShellContext";
 import type { DeliveryIntegrationItem } from "../types/delivery";
 import type { Order, OrderItem, OrderStatus } from "../types/order";
@@ -287,6 +289,7 @@ function normalizeProductImage(item?: OrderItem | null) {
 }
 
 function getStatusTheme(status: OrderStatus) {
+  if (status === "abandonnee") return { bg: "#FFF7ED", text: "#C2410C", border: "#FED7AA" };
   if (status === "confirmee") return { bg: "#DCFCE7", text: "#166534", border: "#BBF7D0" };
   if (status === "telechargee") return { bg: "#DBEAFE", text: "#1D4ED8", border: "#BFDBFE" };
   if (status === "emballee") return { bg: "#F3E8FF", text: "#7C3AED", border: "#DDD6FE" };
@@ -786,9 +789,12 @@ export default function OrdersScreen() {
   const [createVisible, setCreateVisible] = useState(false);
   const [form, setForm] = useState<CreateOrderFormState>(EMPTY_FORM);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const hasBootstrappedAlertRef = useRef(false);
+  const knownLeadCountRef = useRef(0);
 
   const statusLabels: Record<StatusFilter, string> = {
     all: texts.allStatuses,
+    abandonnee: "Abandonnee",
     en_attente: "En attente",
     confirmee: "Confirmee",
     telechargee: "Telechargee",
@@ -812,7 +818,16 @@ export default function OrdersScreen() {
         getProducts(),
         getEnabledDeliveryProviders(),
       ]);
-      setOrders(Array.isArray(ordersData) ? ordersData : []);
+      const normalizedOrders = Array.isArray(ordersData) ? ordersData : [];
+      const nextLeadCount = normalizedOrders.filter((item) => !item.isDeleted).length;
+      const hasNewLead = hasBootstrappedAlertRef.current && nextLeadCount > knownLeadCountRef.current;
+      knownLeadCountRef.current = nextLeadCount;
+      hasBootstrappedAlertRef.current = true;
+      if (hasNewLead) {
+        await playNewOrderAlert();
+      }
+
+      setOrders(normalizedOrders);
       setProducts(Array.isArray(productsData) ? productsData : []);
       setProviders(Array.isArray(enabledProviders) ? enabledProviders : []);
       setBulkProviderKey((current) => {
@@ -830,6 +845,11 @@ export default function OrdersScreen() {
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => loadData(true), 15000);
+    return () => clearInterval(interval);
   }, []);
 
   const filteredOrders = useMemo(() => {
@@ -927,12 +947,10 @@ export default function OrdersScreen() {
     ];
   }, [orders, providers, texts.allProviders]);
 
-  const cityFilterOptions = useMemo(() => {
-    const cities = Array.from(
-      new Set(orders.map((item) => item.city).filter((item): item is string => !!item && !!item.trim())),
-    );
-    return [{ key: "all", label: texts.allCities }, ...cities.map((city) => ({ key: city, label: city }))];
-  }, [orders, texts.allCities]);
+  const cityFilterOptions = useMemo(
+    () => [{ key: "all", label: texts.allCities }, ...TUNISIA_CITY_OPTIONS],
+    [texts.allCities],
+  );
 
   const productFilterOptions = useMemo(
     () => [
@@ -1059,35 +1077,45 @@ export default function OrdersScreen() {
           title: "Succes",
           message: texts.shipSuccess,
         });
+        Alert.alert("Succes", texts.shipSuccess);
       } else if (result.successCount > 0 && result.failureCount > 0) {
         const details = result.results
           .filter((item) => !item.success)
           .map((item) => `${item.orderId.slice(-4)}: ${item.message || "Erreur"}`)
           .join("\n");
+        const message = `${texts.shipPartial}\n${details}`;
         setSelectedIds(result.results.filter((item) => !item.success).map((item) => item.orderId));
         setFeedback({
           tone: "warning",
           title: "Information",
-          message: `${texts.shipPartial}\n${details}`,
+          message,
         });
+        Alert.alert("Information", message);
       } else {
         const details = result.results
           .map((item) => `${item.orderId.slice(-4)}: ${item.message || "Erreur"}`)
           .join("\n");
+        const message = `${texts.shipNothing}\n${details}`;
         setSelectedIds(result.results.map((item) => item.orderId));
         setFeedback({
           tone: "error",
           title: "Erreur",
-          message: `${texts.shipNothing}\n${details}`,
+          message,
         });
+        Alert.alert("Erreur", message);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        texts.shipError;
       setFeedback({
         tone: "error",
         title: "Erreur",
-        message: texts.shipError,
+        message,
       });
+      Alert.alert("Erreur", message);
     } finally {
       setSubmitting(false);
     }
@@ -1923,3 +1951,9 @@ export default function OrdersScreen() {
     </View>
   );
 }
+
+
+
+
+
+

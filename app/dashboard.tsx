@@ -11,6 +11,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import Svg, { Circle, Line, Path, Polyline, Text as SvgText } from "react-native-svg";
+import { Feather } from "@expo/vector-icons";
 import { getStoredUser, getToken, logout } from "../src/services/auth.service";
 import { getDashboardSummary } from "../src/services/dashboard.service";
 import { getApplicationIntegrations } from "../src/services/application-integrations.service";
@@ -55,6 +56,13 @@ type Summary = {
     returnedPercent: number;
     confirmedPercent: number;
     abandonedPercent: number;
+  };
+  shipping: {
+    totalTracked: number;
+    created: number;
+    inTransit: number;
+    delivered: number;
+    returned: number;
   };
   traffic: {
     confirmedCount: number;
@@ -140,6 +148,12 @@ const translations = {
     salesBadge: "Ventes",
     pipeline: "Vue pipeline",
     pipelineSub: "Les KPI essentiels pour decider vite",
+    shipping: "Suivi transport",
+    shippingSub: "Vue rapide des colis sans ouvrir le tableau detaille",
+    shippingTracked: "Colis crees",
+    shippingInTransit: "En cours",
+    shippingDelivered: "Livres",
+    shippingReturned: "Retours",
     leads: "Leads",
     abandons: "Abandons",
     realOrders: "Commandes reelles",
@@ -202,6 +216,12 @@ const translations = {
     salesBadge: "????????",
     pipeline: "???? ??????",
     pipelineSub: "???????? ???????? ?????? ?????? ?????",
+    shipping: "????? ???????",
+    shippingSub: "???? ?????? ????? ??????? ??? ??? ????? ??????? ??????",
+    shippingTracked: "?????? ??????",
+    shippingInTransit: "?? ???????",
+    shippingDelivered: "?????",
+    shippingReturned: "???????",
     leads: "??????? ?????????",
     abandons: "????????",
     realOrders: "??????? ???????",
@@ -535,6 +555,52 @@ function describeArc(
   return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 1 ${end.x} ${end.y}`;
 }
 
+function ShippingStatTile({
+  icon,
+  label,
+  value,
+  accent,
+  soft,
+}: {
+  icon: keyof typeof Feather.glyphMap;
+  label: string;
+  value: number;
+  accent: string;
+  soft: string;
+}) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        minWidth: 150,
+        borderRadius: 22,
+        backgroundColor: soft,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: colors.border,
+        gap: 12,
+      }}
+    >
+      <View
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: 14,
+          backgroundColor: "rgba(255,255,255,0.78)",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Feather name={icon} size={20} color={accent} />
+      </View>
+      <View>
+        <Text style={{ color: colors.muted, fontWeight: "700" }}>{label}</Text>
+        <Text style={{ color: accent, fontWeight: "900", fontSize: 26, marginTop: 8 }}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
 function PipelinePieChart({
   realOrders,
   abandonedLeads,
@@ -815,6 +881,51 @@ export default function DashboardScreen() {
           </Surface>
         ) : null}
 
+        {hasOrdersAccess ? (
+          <Surface>
+            <SectionHeader
+              title={texts.shipping}
+              subtitle={texts.shippingSub}
+              badge={`${summary.shipping.totalTracked} ${texts.shippingTracked.toLowerCase()}`}
+            />
+            <View
+              style={{
+                flexDirection: isDesktop ? "row" : "column",
+                gap: 14,
+              }}
+            >
+              <ShippingStatTile
+                icon="package"
+                label={texts.shippingTracked}
+                value={summary.shipping.created}
+                accent={colors.primary}
+                soft={colors.primarySoft}
+              />
+              <ShippingStatTile
+                icon="truck"
+                label={texts.shippingInTransit}
+                value={summary.shipping.inTransit}
+                accent={colors.orange}
+                soft={colors.orangeSoft}
+              />
+              <ShippingStatTile
+                icon="check-circle"
+                label={texts.shippingDelivered}
+                value={summary.shipping.delivered}
+                accent={colors.green}
+                soft={colors.greenSoft}
+              />
+              <ShippingStatTile
+                icon="corner-up-left"
+                label={texts.shippingReturned}
+                value={summary.shipping.returned}
+                accent={colors.red}
+                soft={colors.redSoft}
+              />
+            </View>
+          </Surface>
+        ) : null}
+
         {isSuperAdmin ? (
           <Surface>
             <SectionHeader title={texts.integrations} subtitle={texts.integrationsSub} badge={`${integrationStats.activeApps} ${texts.active}`} />
@@ -846,5 +957,9 @@ export default function DashboardScreen() {
     </View>
   );
 }
+
+
+
+
 
 

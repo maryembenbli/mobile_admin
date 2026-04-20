@@ -1,5 +1,6 @@
-﻿export type OrderStatus =
+export type OrderStatus =
   | "rejetee"
+  | "abandonnee"
   | "en_attente"
   | "tentative1"
   | "confirmee"
@@ -63,6 +64,8 @@ export type Order = {
   createdAt?: string;
   updatedAt?: string;
 };
+
+
 
 
 

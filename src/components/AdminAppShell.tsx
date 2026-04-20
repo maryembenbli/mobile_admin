@@ -19,6 +19,7 @@ type NavLabelSet = {
   delivery: string;
   categories: string;
   permissions: string;
+  deliveryTracking: string;
   openStore: string;
   connectedAs: string;
   logout: string;
@@ -34,7 +35,7 @@ const MODULE_ALIASES: Record<string, string[]> = {
   products: ["products", "product", "produit", "produits"],
   admins: ["admins", "admin", "users", "utilisateur", "utilisateurs", "staff"],
   applications: ["applications", "integrations", "app-integrations", "marketing", "analytics"],
-  delivery: ["livraison", "delivery", "delivery-integrations"],
+  delivery: ["livraison", "delivery", "delivery-integrations", "delivery-shipments"],
 };
 
 const labels: Record<AdminShellLocale, NavLabelSet> = {
@@ -49,6 +50,7 @@ const labels: Record<AdminShellLocale, NavLabelSet> = {
     delivery: "Livraison",
     categories: "Categories",
     permissions: "Permissions",
+    deliveryTracking: "Suivi commande",
     openStore: "Voir la boutique",
     connectedAs: "Connecte en tant que",
     logout: "Deconnexion",
@@ -68,6 +70,7 @@ const labels: Record<AdminShellLocale, NavLabelSet> = {
     delivery: "التوصيل",
     categories: "التصنيفات",
     permissions: "الصلاحيات",
+    deliveryTracking: "متابعة الشحنات",
     openStore: "عرض المتجر",
     connectedAs: "المستخدم المتصل",
     logout: "تسجيل الخروج",
@@ -103,6 +106,7 @@ function resolveTitle(pathname: string, locale: AdminShellLocale) {
   if (pathname.startsWith("/products")) return t.products;
   if (pathname.startsWith("/admins")) return t.admins;
   if (pathname.startsWith("/app-integrations")) return t.applications;
+  if (pathname.startsWith("/delivery-shipments")) return t.deliveryTracking;
   if (pathname.startsWith("/delivery-integrations")) return t.delivery;
   if (pathname.startsWith("/categories")) return t.categories;
   if (pathname.startsWith("/permissions")) return t.permissions;
@@ -173,7 +177,22 @@ export default function AdminAppShell({
           ],
         },
         { key: "applications", label: t.applications, route: "/app-integrations", accent: colors.cobalt, visible: !!user?.isSuperAdmin },
-        { key: "delivery", label: t.delivery, route: "/delivery-integrations", accent: colors.green, visible: !!user?.isSuperAdmin },
+        {
+          key: "delivery",
+          label: t.delivery,
+          route: "/delivery-integrations",
+          accent: colors.green,
+          visible: !!user?.isSuperAdmin,
+          children: [
+            {
+              key: "deliveryTracking",
+              label: t.deliveryTracking,
+              route: "/delivery-shipments",
+              accent: colors.green,
+              visible: !!user?.isSuperAdmin,
+            },
+          ],
+        },
       ]
         .filter((item) => item.visible)
         .map((item) => ({
@@ -495,3 +514,4 @@ function LinearBrandBlock({ title, subtitle }: { title: string; subtitle: string
     </View>
   );
 }
+
